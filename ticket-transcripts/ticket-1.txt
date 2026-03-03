@@ -1,0 +1,9 @@
+[KAI ON TOP#0275] <@1112091588462649364> <@&1477044901995872296>
+[KAI ON TOP#0275] ⚠️ Failed to auto-add trader. Use `.add @user`.
+[l.bbg] o
+[l.bbg] ok
+[KAI ON TOP#0275] 🏷️ Ticket claimed.
+[KAI ON TOP#0275] ❌ Ticket unclaimed.
+[l.bbg] bot crashed
+[l.bbg] ;-;
+[l.bbg] .close

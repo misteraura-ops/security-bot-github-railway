@@ -1,31 +1,49 @@
-const { PermissionsBitField, ChannelType } = require("discord.js");
+const { Events } = require('discord.js');
+const ticketManager = require('../utils/ticketManager');
 
 module.exports = {
-    name: "interactionCreate",
-    async execute(interaction, client) {
-        if (!interaction.isButton()) return;
+  name: Events.InteractionCreate,
+  async execute(interaction, client) {
+    try {
 
-        if (interaction.customId === "create_ticket") {
-            const guild = interaction.guild;
-            const member = interaction.member;
+      // -------------------------
+      // SELECT MENUS (Tickets)
+      // -------------------------
+      if (interaction.isStringSelectMenu()) {
+        if (interaction.replied || interaction.deferred) return;
+        return await ticketManager.handleCategorySelect(interaction, client);
+      }
 
-            const ticketChannel = await guild.channels.create({
-                name: `ticket-${member.user.username}`,
-                type: ChannelType.GuildText,
-                permissionOverwrites: [
-                    {
-                        id: guild.roles.everyone.id,
-                        deny: [PermissionsBitField.Flags.ViewChannel],
-                    },
-                    {
-                        id: member.id,
-                        allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
-                    }
-                ],
-            });
+      // -------------------------
+      // MODALS (Tickets)
+      // -------------------------
+      if (interaction.isModalSubmit()) {
+        if (interaction.replied || interaction.deferred) return;
+        return await ticketManager.handleModal(interaction, client);
+      }
 
-            await ticketChannel.send(`Hello ${member}, welcome to your ticket!`);
-            await interaction.reply({ content: `Ticket created: ${ticketChannel}`, ephemeral: true });
-        }
-    },
+      // -------------------------
+      // BUTTONS (ONLY ticket ones)
+      // -------------------------
+      if (interaction.isButton()) {
+
+        // ⚠️ Only handle ticket buttons here
+        // Prevents conflict with collectors in other commands
+        if (!interaction.customId.startsWith('ticket_')) return;
+
+        if (interaction.replied || interaction.deferred) return;
+        return await ticketManager.handleButton(interaction, client);
+      }
+
+    } catch (error) {
+      console.error('❌ InteractionCreate Error:', error);
+
+      if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+        await interaction.reply({
+          content: '❌ Something went wrong.',
+          flags: 64 // ephemeral (new method)
+        }).catch(() => {});
+      }
+    }
+  }
 };

@@ -1,0 +1,51 @@
+{
+    "1477043680295522479": [
+        {
+            "case": 1,
+            "user": "1400586703667990588",
+            "moderator": "1112091588462649364",
+            "reason": "No reason provided",
+            "date": "2026-03-03T08:48:47.301Z"
+        },
+        {
+            "case": 2,
+            "user": "1365013388106666055",
+            "moderator": "1112091588462649364",
+            "reason": "No reason provided",
+            "action": "warn",
+            "date": "2026-03-03T12:08:57.288Z"
+        },
+        {
+            "case": 3,
+            "user": "1365013388106666055",
+            "moderator": "1112091588462649364",
+            "reason": "No reason provided",
+            "action": "warn",
+            "date": "2026-03-03T12:12:08.313Z"
+        },
+        {
+            "case": 4,
+            "user": "1365013388106666055",
+            "moderator": "1112091588462649364",
+            "reason": "No reason provided",
+            "action": "warn",
+            "date": "2026-03-03T12:12:17.935Z"
+        },
+        {
+            "case": 5,
+            "user": "1447970018515222689",
+            "moderator": "1365013388106666055",
+            "reason": "u",
+            "action": "warn",
+            "date": "2026-03-03T12:18:58.174Z"
+        },
+        {
+            "case": 6,
+            "user": "1365013388106666055",
+            "moderator": "1112091588462649364",
+            "reason": "No reason provided",
+            "action": "warn",
+            "date": "2026-03-03T12:25:47.565Z"
+        }
+    ]
+}

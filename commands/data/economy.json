@@ -1,0 +1,34 @@
+{
+  "1112091588462649364": {
+    "wallet": 4609,
+    "bank": 0,
+    "marriedTo": null,
+    "xp": 54
+  },
+  "1466418980108501094": {
+    "wallet": 500,
+    "bank": 0,
+    "marriedTo": null
+  },
+  "1135999619541774386": {
+    "wallet": 3757,
+    "bank": 0,
+    "xp": 40,
+    "marriedTo": "693431195777892352",
+    "house": null
+  },
+  "693431195777892352": {
+    "wallet": 1000,
+    "bank": 0,
+    "xp": 0,
+    "marriedTo": "1135999619541774386",
+    "house": null
+  },
+  "1271073374289789029": {
+    "wallet": 585,
+    "bank": 0,
+    "xp": 0,
+    "marriedTo": null,
+    "house": null
+  }
+}
