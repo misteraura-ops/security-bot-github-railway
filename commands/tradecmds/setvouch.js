@@ -1,0 +1,54 @@
+const { EmbedBuilder } = require('discord.js');
+const fs = require('fs');
+const path = require('path');
+
+module.exports = {
+  name: 'setvouch',
+  description: 'Set vouches for a middleman (OWNER_ID / SET_VOUCHES role only)',
+  async execute(message, args) {
+    const SET_VOUCHES = process.env.SET_VOUCHES;
+    const OWNER_ID = process.env.OWNER_ID;
+
+    if (![OWNER_ID, message.author.id].includes(message.author.id) && !message.member.roles.cache.has(SET_VOUCHES)) {
+      return; // silently fail
+    }
+
+    if (!args[0] || !args[1]) return; // silently fail
+
+    const input = args[0];
+    const vouches = parseInt(args[1]);
+    if (isNaN(vouches)) return; // silently fail
+
+    // Resolve member
+    let member;
+    const mention = input.match(/<@!?(\d+)>/);
+    if (mention) member = await message.guild.members.fetch(mention[1]).catch(() => null);
+    else if (!isNaN(input)) member = await message.guild.members.fetch(input).catch(() => null);
+    else member = message.guild.members.cache.find(m =>
+      m.user.username.toLowerCase() === input.toLowerCase() ||
+      (m.nickname && m.nickname.toLowerCase() === input.toLowerCase())
+    );
+
+    if (!member) return; // silently fail
+
+    // Load / save data
+    const vouchPath = path.join(__dirname, '../../db/mmVouches.json');
+    const vouchesData = fs.existsSync(vouchPath) ? JSON.parse(fs.readFileSync(vouchPath)) : {};
+    vouchesData[member.id] = vouches;
+    fs.writeFileSync(vouchPath, JSON.stringify(vouchesData, null, 2));
+
+    // Embed confirmation
+    const embed = new EmbedBuilder()
+      .setTitle(`✅ Vouches Updated • ${member.user.tag}`)
+      .setColor('#00BFFF')
+      .addFields(
+        { name: 'New Vouches', value: vouches.toString(), inline: true },
+        { name: 'Updated By', value: `<@${message.author.id}>`, inline: true },
+        { name: 'Status', value: 'Updated successfully', inline: true }
+      )
+      .setFooter({ text: 'Kai Kingdom MM System • Security Bot' })
+      .setTimestamp();
+
+    await message.channel.send({ embeds: [embed] }).catch(() => {});
+  }
+};
