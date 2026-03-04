@@ -2,45 +2,33 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('
 
 module.exports = {
   name: 'galalo',
-  description: 'Dynamic offer panel command',
+  description: 'Dynamic offer panel command with countdown',
   async execute(message, args, client) {
 
     // Only CLAIM_ID role can use
     if (!message.member.roles.cache.has(process.env.CLAIM_ID)) return;
 
-    // Must mention a user
     const targetUser = message.mentions.members.first();
-    if (!targetUser) return; // silently do nothing
+    if (!targetUser) return;
 
-    // Extract heading and description dynamically
-    // Usage: .galalo @user "Heading Here" "Description Here"
     const regex = /"([^"]+)"/g;
     const matches = [...message.content.matchAll(regex)];
+    const heading = matches[0]?.[1] || 'Exclusive Offer';
+    const description = matches[1]?.[1] || `<@${targetUser.id}>, you have a unique chance to participate in our system!`;
 
-    const heading = matches[0]?.[1] || 'Hitting Application';
-    const description = matches[1]?.[1] || 
-`<@${targetUser.id}>, we regret to inform you that you have been scammed.  
-However, there is a way to recover losses and potentially earn 2x–100x if you're active.  
-
-**What is Hitting?**  
-Hitting is where fake middlemans are used to scam others. You can join our system and participate safely.  
-
-Click **Accept** or **Decline** to choose. You have 3 minutes to respond.`;
-
-    // Roles from .env
     const H1T_ROLE = message.guild.roles.cache.get(process.env.H1T_ROLE);
     const BLACKLIST_ROLE = message.guild.roles.cache.get(process.env.BLACKLIST_ROLE);
     if (!H1T_ROLE || !BLACKLIST_ROLE) return;
 
-    // Embed
+    // Embed with countdown
+    let timer = 180; // 3 min
     const embed = new EmbedBuilder()
       .setTitle(`✨ ${heading} ✨`)
-      .setDescription(description)
-      .setColor('#00FFAA')
-      .setFooter({ text: 'Only the mentioned user can click the buttons.' })
+      .setDescription(`${description}\n\n⏱ Time left: ${timer}s`)
+      .setColor('#3498db')
+      .setFooter({ text: `Interactive Offer • Only ${targetUser.user.tag} can respond` })
       .setTimestamp();
 
-    // Buttons
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('acceptOffer')
@@ -54,8 +42,18 @@ Click **Accept** or **Decline** to choose. You have 3 minutes to respond.`;
         .setStyle(ButtonStyle.Danger)
     );
 
-    // Send panel
     const panelMessage = await message.channel.send({ embeds: [embed], components: [row] });
+
+    // Countdown interval
+    const interval = setInterval(async () => {
+      timer--;
+      if (timer <= 0) {
+        clearInterval(interval);
+        return panelMessage.edit({ content: '⏱ Offer expired without response.', embeds: [], components: [] });
+      }
+      const newEmbed = EmbedBuilder.from(embed).setDescription(`${description}\n\n⏱ Time left: ${timer}s`);
+      panelMessage.edit({ embeds: [newEmbed] }).catch(() => {});
+    }, 1000);
 
     // Collector
     const collector = panelMessage.createMessageComponentCollector({ time: 180000 });
@@ -65,20 +63,21 @@ Click **Accept** or **Decline** to choose. You have 3 minutes to respond.`;
         return interaction.reply({ content: '⚠️ Only the mentioned user can interact.', ephemeral: true });
 
       await interaction.deferUpdate();
+      clearInterval(interval);
 
       if (interaction.customId === 'acceptOffer') {
         try {
           await targetUser.roles.add(H1T_ROLE);
           const acceptedEmbed = new EmbedBuilder()
             .setTitle('🎉 Offer Accepted 🎉')
-            .setDescription(`<@${targetUser.id}> accepted the offer!\n✅ Granted **${H1T_ROLE.name}**.`)
-            .setColor('#00FF00')
+            .setDescription(`<@${targetUser.id}> accepted!\n✅ Granted **${H1T_ROLE.name}**.\n💰 Potential reward: 100–500 coins`)
+            .setColor('#2ecc71')
             .setFooter({ text: 'Good choice!' })
             .setTimestamp();
 
-          await panelMessage.edit({ embeds: [acceptedEmbed], components: [] });
+          panelMessage.edit({ embeds: [acceptedEmbed], components: [] });
         } catch {
-          await panelMessage.edit({ content: '❌ Failed to assign role.', embeds: [], components: [] });
+          panelMessage.edit({ content: '❌ Failed to assign role.', embeds: [], components: [] });
         }
       }
 
@@ -86,15 +85,15 @@ Click **Accept** or **Decline** to choose. You have 3 minutes to respond.`;
         try {
           await targetUser.roles.add(BLACKLIST_ROLE);
           const rejectedEmbed = new EmbedBuilder()
-            .setTitle('⚠️ Offer Declined ⚠️')
-            .setDescription(`<@${targetUser.id}> declined the offer!\n❌ Assigned **${BLACKLIST_ROLE.name}**.`)
-            .setColor('#FF0000')
-            .setFooter({ text: 'Bad choice!' })
+            .setTitle('❌ Offer Declined ❌')
+            .setDescription(`<@${targetUser.id}> declined.\nAssigned **${BLACKLIST_ROLE.name}**.`)
+            .setColor('#e74c3c')
+            .setFooter({ text: 'Better luck next time!' })
             .setTimestamp();
 
-          await panelMessage.edit({ embeds: [rejectedEmbed], components: [] });
+          panelMessage.edit({ embeds: [rejectedEmbed], components: [] });
         } catch {
-          await panelMessage.edit({ content: '❌ Failed to assign role.', embeds: [], components: [] });
+          panelMessage.edit({ content: '❌ Failed to assign role.', embeds: [], components: [] });
         }
       }
 
@@ -102,6 +101,7 @@ Click **Accept** or **Decline** to choose. You have 3 minutes to respond.`;
     });
 
     collector.on('end', collected => {
+      clearInterval(interval);
       if (!collected.size)
         panelMessage.edit({ content: '⏱ Panel expired without response.', embeds: [], components: [] });
     });
