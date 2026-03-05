@@ -26,6 +26,11 @@ const client = new Client({
 });
 
 // -------------------------
+// Stick Command
+// -------------------------
+const stickCmd = require('./commands/moderation/stick');
+
+// -------------------------
 // Collections & Prefixes
 // -------------------------
 client.commands = new Collection();
@@ -151,9 +156,19 @@ if (fs.existsSync(eventPath)) {
 // Handle Prefix Commands
 // -------------------------
 client.on(Events.MessageCreate, async (message) => {
+
   if (!message.guild || message.author.bot) return;
 
+  // -------------------------
+  // Sticky Listener
+  // -------------------------
+  if (stickCmd.stickyListener) {
+    stickCmd.stickyListener(message);
+  }
+
+  // -------------------------
   // Maintenance Mode
+  // -------------------------
   if (client.isMaintenance && message.author.id !== process.env.OWNER_ID) {
     return message.channel.send({
       embeds: [{
