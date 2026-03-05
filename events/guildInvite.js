@@ -19,7 +19,7 @@ module.exports = {
                     { name: 'Server', value: member.guild.name, inline: true },
                     { name: 'Member Count', value: `${member.guild.memberCount}`, inline: true }
                 )
-                .setFooter({ text: 'Kai Kingdom Invite Tracker • Security Bot' })
+                .setFooter({ text: 'Eldorado.gg Invite Tracker • Bot' })
                 .setTimestamp();
 
             inviteChannel.send({ embeds: [embed] });

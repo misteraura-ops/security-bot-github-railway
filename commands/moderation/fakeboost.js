@@ -41,7 +41,7 @@ module.exports = {
                 { name: 'Server', value: guild.name, inline: true },
                 { name: 'Total Boosts', value: `${guild.premiumSubscriptionCount}`, inline: true }
             )
-            .setFooter({ text: 'Testing MM Boost Panel • Kai Kingdom' })
+            .setFooter({ text: 'Thank you for supporting • Eldorado.gg' })
             .setTimestamp();
 
         const boostChannel = await guild.channels.fetch(BOOST_CHANNEL_ID).catch(() => null);

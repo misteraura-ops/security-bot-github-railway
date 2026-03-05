@@ -30,7 +30,7 @@ module.exports = {
                     { name: 'Server', value: guild.name, inline: true },
                     { name: 'Total Boosts', value: `${guild.premiumSubscriptionCount}`, inline: true }
                 )
-                .setFooter({ text: 'Thank you for supporting Kai Kingdom MM Server!' })
+                .setFooter({ text: 'Thank you for supporting Eldorado.gg !' })
                 .setTimestamp();
 
             // 4️⃣ Send the embed in the fixed boosts channel
