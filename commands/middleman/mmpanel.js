@@ -1,6 +1,5 @@
 require('dotenv').config();
-const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const ticketManager = require('../../utils/ticketManager');
+const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 
 module.exports = {
   name: 'mmpanel',
@@ -18,45 +17,47 @@ module.exports = {
       { label: 'Other', value: 'Other', emoji: '📌' },
     ];
 
+    // Professional, spacious, premium embed
     const embed = new EmbedBuilder()
-      .setTitle('🔒 Trade Market • Official Middleman Service ')
-      .setDescription(`Welcome to **Kai Kingdom Secure Middleman System** — where your trades are safe, transparent, and protected.\n\u200B
-✨ Verified middlemen ensure:
-• 🛡️ Safe Transactions – your assets are secure
-• ❌ Zero Scam Tolerance – strict rules enforced
-• 🔍 Transparent Deal Handling – full visibility
-• 💰 Secure Asset Holding – until deal completion
-━━━━━━━━━━━━━━━━━━━━━━
-📜 🛡️ Middleman Rules
-• ✍️ Both traders must confirm deal terms clearly
-• 🔒 Terms cannot be changed after MM holds assets
-• ⚠️ Fake proof = instant blacklist
-• 🚫 Impersonation = permanent ban
-• 💸 Crypto trades require valid TX proof
-• ✅ All payments must be verified before release
-• 🏛️ Middleman decision is final
-━━━━━━━━━━━━━━━━━━━━━━
-🛡️ Security Notice
-• ⚠️ Only trust tickets created via this official panel
-• 💬 Staff will never DM you first
-• 🟢 Check role color & join date before trusting anyone
-• 📚 All tickets are logged & archived
-━━━━━━━━━━━━━━━━━━━━━━
-📌 Select your trade category below to begin
-🎯 Make your trade safe, fast, and professional!`)
+      .setTitle('🔒 Eldorado.gg • Official Middleman Service')
+      .setDescription(
+        `Welcome to **Eldorado.gg Secure Middleman System** — your trades are safe, verified, and professional.\n\n` +
+        `✨ **Verified Middlemen Ensure:**\n` +
+        `• 🛡️ Safe Transactions — all assets protected\n` +
+        `• ❌ Zero Scam Tolerance — strict rules enforced\n` +
+        `• 🔍 Transparent Deal Handling — full visibility\n` +
+        `• 💰 Secure Asset Holding — until deal completion\n\n` +
+        `📜 **Middleman Rules:**\n` +
+        `• ✍️ Both traders must confirm terms clearly\n` +
+        `• 🔒 Terms cannot be changed once MM holds assets\n` +
+        `• ⚠️ Fake proof = instant blacklist\n` +
+        `• 🚫 Impersonation = permanent ban\n` +
+        `• 💸 Crypto trades require valid transaction proof\n` +
+        `• ✅ Payments must be verified before release\n` +
+        `• 🏛️ Middleman decisions are final\n\n` +
+        `🛡️ **Security Notice:**\n` +
+        `• ⚠️ Only trust tickets from this official panel\n` +
+        `• 💬 Staff will never DM you first\n` +
+        `• 🟢 Check role color & join date before trusting\n` +
+        `• 📚 All tickets are logged & archived\n\n` +
+        `📌 **Select your trade category below to begin**\n` +
+        `🎯 Make your trade fast, secure, and professional!`
+      )
       .setColor('#1F2937')
-      .setFooter({ text: 'Kai Kingdom MM Panel', iconURL: client.user.displayAvatarURL() })
+      .setFooter({ text: 'Eldorado.gg MM Panel', iconURL: client.user.displayAvatarURL() })
       .setTimestamp();
 
-    // Dropdown menu
+    // Dropdown menu: professional, spaced, clear
     const selectMenu = new StringSelectMenuBuilder()
       .setCustomId('ticketCategorySelect')
-      .setPlaceholder('➤ Select trade category')
-      .addOptions(categories.map(c => ({
-        label: `【${c.emoji}】 ${c.label}`,
-        value: c.value,
-        description: `Start a ${c.label} trade ticket`,
-      })));
+      .setPlaceholder('➤ Select your trade category')
+      .addOptions(
+        categories.map(c => ({
+          label: `【${c.emoji}】 ${c.label}`,
+          value: c.value,
+          description: `Create a secure ${c.label} trade ticket`,
+        }))
+      );
 
     const row = new ActionRowBuilder().addComponents(selectMenu);
 
