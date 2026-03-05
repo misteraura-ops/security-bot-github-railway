@@ -1,45 +1,45 @@
 const { EmbedBuilder } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
 
 module.exports = {
   name: 'mmlist',
-  description: 'Shows a list of all middlemen with vouches, trust, and status',
+  description: 'Shows a list of all middlemen (auto-updates every 5 hours)',
   async execute(message, args) {
 
-    // Use direct role ID instead of environment variable
-    const CLAIM_ROLE_ID = '1465699111931215903';
+    const CLAIM_ROLE_ID = '1465699111931215903'; // Middleman role
+    const channel = message.channel;
 
-    const mmVouchesPath = path.join(__dirname, '../../db/mmVouches.json');
-    const mmStatusPath  = path.join(__dirname, '../../db/mmStatus.json');
-    const mmTrustPath   = path.join(__dirname, '../../db/mmTrust.json');
+    // Function to build the embed
+    async function buildEmbed() {
+      // Fetch fresh members to sync
+      await message.guild.members.fetch();
 
-    const vouchData  = fs.existsSync(mmVouchesPath) ? JSON.parse(fs.readFileSync(mmVouchesPath)) : {};
-    const statusData = fs.existsSync(mmStatusPath)  ? JSON.parse(fs.readFileSync(mmStatusPath)) : {};
-    const trustData  = fs.existsSync(mmTrustPath)   ? JSON.parse(fs.readFileSync(mmTrustPath)) : {};
+      const members = message.guild.members.cache.filter(m => m.roles.cache.has(CLAIM_ROLE_ID));
 
-    // Filter members with the middleman role
-    const members = message.guild.members.cache.filter(m => m.roles.cache.has(CLAIM_ROLE_ID));
+      const lines = members.map(m => `**• ${m.user.username}**`).join('\n');
 
-    if (!members.size) return; // silently fail if no MMs
+      const embed = new EmbedBuilder()
+        .setTitle('🎯 Trusted Middlemen')
+        .setColor('#FFD700') // Yellow theme
+        .setDescription(lines || 'No middlemen found.')
+        .setFooter({ text: 'Eldorado.gg MM System • Security Bot' })
+        .setTimestamp()
+        .setThumbnail(message.guild.iconURL({ dynamic: true }));
 
-    const lines = members.map(m => {
-      const vouches = vouchData[m.id] || 0;
-      const trust   = trustData[m.id] || 0;
-      const active  = statusData[m.id] || 'Inactive';
+      return embed;
+    }
 
-      return `**• ${m.user.username}**\n> 🛡 Trust Score: ${trust}\n> ✨ Vouches: ${vouches}\n> 🔹 Status: ${active}`;
-    });
+    // Send initial message
+    const initialEmbed = await buildEmbed();
+    const sentMessage = await channel.send({ embeds: [initialEmbed] });
 
-    const embed = new EmbedBuilder()
-      .setTitle('🎯 Middleman Leaderboard')
-      .setColor('#00FFAA')
-      .setDescription(lines.join('\n\n'))
-      .setFooter({ text: 'Kai Kingdom MM System • Security Bot' })
-      .setTimestamp()
-      .setThumbnail(message.guild.iconURL({ dynamic: true }))
-      .setAuthor({ name: 'Trusted Middlemen', iconURL: message.guild.iconURL({ dynamic: true }) });
-
-    await message.channel.send({ embeds: [embed] }).catch(() => {});
+    // Auto-update every 5 hours
+    setInterval(async () => {
+      try {
+        const updatedEmbed = await buildEmbed();
+        await sentMessage.edit({ embeds: [updatedEmbed] });
+      } catch (err) {
+        console.error('Error updating MM list embed:', err);
+      }
+    }, 5 * 60 * 60 * 1000); // 5 hours
   }
 };
