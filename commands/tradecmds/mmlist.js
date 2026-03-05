@@ -29,8 +29,8 @@ module.exports = {
 
     // Sort descending by vouches
     memberList.sort((a, b) => {
-      const vA = parseInt(a.match(/\*\*(\d+)\*\*/)[1]);
-      const vB = parseInt(b.match(/\*\*(\d+)\*\*/)[1]);
+      const vA = parseInt(a.match(/Vouches:\s\*\*(\d+)\*\*/)[1]);
+      const vB = parseInt(b.match(/Vouches:\s\*\*(\d+)\*\*/)[1]);
       return vB - vA;
     });
 
@@ -44,8 +44,10 @@ module.exports = {
       const end = start + pageSize;
       const currentMembers = memberList.slice(start, end);
 
-      // Add subtle separator lines for elegance
-      const formattedMembers = currentMembers.map((m, i) => `\`─\` **${i + 1 + pageIndex*pageSize}.** ${m}`).join('\n\n');
+      // Elegant numbering with subtle separator
+      const formattedMembers = currentMembers
+        .map((m, i) => `\`•\` **${i + 1 + pageIndex*pageSize}.** ${m}`)
+        .join('\n\n');
 
       return new EmbedBuilder()
         .setTitle('🏛️ Eldorado.gg • Trusted Middlemen')
@@ -75,7 +77,8 @@ module.exports = {
     const collector = msg.createMessageComponentCollector({ time: 5 * 60 * 1000 });
 
     collector.on('collect', i => {
-      if (i.user.id !== message.author.id) return i.reply({ content: '❌ Only the command user can navigate.', ephemeral: true });
+      if (i.user.id !== message.author.id) 
+        return i.reply({ content: '❌ Only the command user can navigate.', ephemeral: true });
 
       if (i.customId === 'nextPage') page = (page + 1) % totalPages;
       else if (i.customId === 'prevPage') page = (page - 1 + totalPages) % totalPages;
