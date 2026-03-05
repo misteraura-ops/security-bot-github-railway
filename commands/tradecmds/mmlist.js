@@ -18,10 +18,12 @@ module.exports = {
 
     if (!members.size) return message.channel.send('⚠️ No middlemen found in the server.');
 
-    // Map member info
+    // Map member info with highest role ping
     const memberList = members.map(m => {
       const vouches = vouchData[m.id] || 0;
-      const highestRole = m.roles.highest.name !== '@everyone' ? m.roles.highest.name : 'No special role';
+      const highestRole = m.roles.highest.id !== message.guild.id // exclude @everyone
+        ? `<@&${m.roles.highest.id}>` 
+        : 'No special role';
       return `**• ${m.displayName}** [${highestRole}]\n> ✨ Vouches: **${vouches}**`;
     });
 
