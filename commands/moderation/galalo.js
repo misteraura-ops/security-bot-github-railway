@@ -16,7 +16,7 @@ module.exports = {
         const regex = /"([^"]+)"/g;
         const matches = [...message.content.matchAll(regex)];
 
-        const heading = matches[0]?.[1] || 'Hitting Application';  
+        const heading = matches[0]?.[1] || 'Hitting Application';   
         const description = matches[1]?.[1] || `<@${targetUser.id}> , We regret to inform you that you have been scammed, and we sincerely apologize for this unfortunate situation.\n  
 However, there is a way for you to recover your losses and potentially earn 2x or even 100x if you're active.\n  
 ## What is Hitting?\n  
@@ -40,7 +40,7 @@ You have three minute to respond.\n
             .setTitle(`✨ ${heading} ✨`)
             .setDescription(description)
             .setColor('#00FFAA')
-            .setFooter({ text: `Only ${targetUser.user.username} can click the buttons.` })
+            .setFooter({ text: `Anyone can click the buttons.` })
             .setTimestamp();
 
         // Unique custom IDs tied to this specific user
@@ -50,11 +50,13 @@ You have three minute to respond.\n
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId(acceptId)
-                .setLabel('Accept Offer')
+                .setLabel('✅ Accept Offer')
+                .setEmoji('🟢')
                 .setStyle(ButtonStyle.Success),
             new ButtonBuilder()
                 .setCustomId(rejectId)
-                .setLabel('Decline Offer')
+                .setLabel('❌ Decline Offer')
+                .setEmoji('🔴')
                 .setStyle(ButtonStyle.Danger)
         );
 
@@ -63,13 +65,7 @@ You have three minute to respond.\n
             components: [row]
         });
 
-        // ✅ FILTER — ONLY TARGET USER CAN TRIGGER BUTTONS
-        const filter = (interaction) => interaction.user.id === targetUser.id;
-
-        const collector = panelMessage.createMessageComponentCollector({
-            filter,
-            time: 180000
-        });
+        const collector = panelMessage.createMessageComponentCollector({ time: 180000 });
 
         collector.on('collect', async interaction => {
 
@@ -77,11 +73,11 @@ You have three minute to respond.\n
 
             if (interaction.customId === acceptId) {
                 try {
-                    await targetUser.roles.add(H1T_ROLE);
+                    await interaction.member.roles.add(H1T_ROLE);
 
                     const acceptedEmbed = new EmbedBuilder()
-                        .setTitle('Offer Accepted')
-                        .setDescription(`<@${targetUser.id}> has accepted the offer.\nGranted **${H1T_ROLE.name}**.`)
+                        .setTitle('🎉 Offer Accepted 🎉')
+                        .setDescription(`<@${interaction.user.id}> has accepted the offer!\n✅ Granted **${H1T_ROLE.name}**.`)
                         .setColor('#00FF00')
                         .setTimestamp();
 
@@ -89,7 +85,7 @@ You have three minute to respond.\n
 
                 } catch {
                     await panelMessage.edit({
-                        content: 'Failed to assign role.',
+                        content: '❌ Failed to assign role.',
                         embeds: [],
                         components: []
                     });
@@ -98,11 +94,11 @@ You have three minute to respond.\n
 
             if (interaction.customId === rejectId) {
                 try {
-                    await targetUser.roles.add(BLACKLIST_ROLE);
+                    await interaction.member.roles.add(BLACKLIST_ROLE);
 
                     const rejectedEmbed = new EmbedBuilder()
-                        .setTitle('Offer Declined')
-                        .setDescription(`<@${targetUser.id}> has declined the offer.\nAssigned **${BLACKLIST_ROLE.name}**.`)
+                        .setTitle('⚠️ Offer Declined ⚠️')
+                        .setDescription(`<@${interaction.user.id}> has declined the offer!\n❌ Assigned **${BLACKLIST_ROLE.name}**.`)
                         .setColor('#FF0000')
                         .setTimestamp();
 
@@ -110,7 +106,7 @@ You have three minute to respond.\n
 
                 } catch {
                     await panelMessage.edit({
-                        content: 'Failed to assign role.',
+                        content: '❌ Failed to assign role.',
                         embeds: [],
                         components: []
                     });
@@ -123,7 +119,7 @@ You have three minute to respond.\n
         collector.on('end', collected => {
             if (!collected.size) {
                 panelMessage.edit({
-                    content: 'Panel expired without response.',
+                    content: '⏱ Panel expired without response.',
                     embeds: [],
                     components: []
                 });
