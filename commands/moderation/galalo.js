@@ -24,7 +24,7 @@ Hitting is where you scam other people, often using fake middlemans. You can use
 Choose if you want to start hitting with us now.\n  
 Please click accept or decline to indicate your decision.\n  
 You have three minute to respond.\n  
-**The decision is yours. Make it count.**`;
+*The decision is yours. Make it count.*`;
 
         // Hardcoded role IDs
         const H1T_ROLE_ID = '1465699224061743156';
@@ -50,13 +50,11 @@ You have three minute to respond.\n
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId(acceptId)
-                .setLabel('✅ Accept Offer')
-                .setEmoji('🟢')
+                .setLabel('Accept Offer')
                 .setStyle(ButtonStyle.Success),
             new ButtonBuilder()
                 .setCustomId(rejectId)
-                .setLabel('❌ Decline Offer')
-                .setEmoji('🔴')
+                .setLabel('Decline Offer')
                 .setStyle(ButtonStyle.Danger)
         );
 
@@ -65,17 +63,15 @@ You have three minute to respond.\n
             components: [row]
         });
 
-        const collector = panelMessage.createMessageComponentCollector({ time: 180000 });
+        // ✅ FILTER — ONLY TARGET USER CAN TRIGGER BUTTONS
+        const filter = (interaction) => interaction.user.id === targetUser.id;
+
+        const collector = panelMessage.createMessageComponentCollector({
+            filter,
+            time: 180000
+        });
 
         collector.on('collect', async interaction => {
-
-            // ❗ STRICT CHECK — ONLY mentioned user can interact
-            if (interaction.user.id !== targetUser.id) {
-                return interaction.reply({
-                    content: '⚠️ Only the mentioned user can interact with this panel.',
-                    ephemeral: true
-                });
-            }
 
             await interaction.deferUpdate();
 
@@ -84,8 +80,8 @@ You have three minute to respond.\n
                     await targetUser.roles.add(H1T_ROLE);
 
                     const acceptedEmbed = new EmbedBuilder()
-                        .setTitle('🎉 Offer Accepted 🎉')
-                        .setDescription(`<@${targetUser.id}> has accepted the offer!\n✅ Granted **${H1T_ROLE.name}**.`)
+                        .setTitle('Offer Accepted')
+                        .setDescription(`<@${targetUser.id}> has accepted the offer.\nGranted **${H1T_ROLE.name}**.`)
                         .setColor('#00FF00')
                         .setTimestamp();
 
@@ -93,7 +89,7 @@ You have three minute to respond.\n
 
                 } catch {
                     await panelMessage.edit({
-                        content: '❌ Failed to assign role.',
+                        content: 'Failed to assign role.',
                         embeds: [],
                         components: []
                     });
@@ -105,8 +101,8 @@ You have three minute to respond.\n
                     await targetUser.roles.add(BLACKLIST_ROLE);
 
                     const rejectedEmbed = new EmbedBuilder()
-                        .setTitle('⚠️ Offer Declined ⚠️')
-                        .setDescription(`<@${targetUser.id}> has declined the offer!\n❌ Assigned **${BLACKLIST_ROLE.name}**.`)
+                        .setTitle('Offer Declined')
+                        .setDescription(`<@${targetUser.id}> has declined the offer.\nAssigned **${BLACKLIST_ROLE.name}**.`)
                         .setColor('#FF0000')
                         .setTimestamp();
 
@@ -114,7 +110,7 @@ You have three minute to respond.\n
 
                 } catch {
                     await panelMessage.edit({
-                        content: '❌ Failed to assign role.',
+                        content: 'Failed to assign role.',
                         embeds: [],
                         components: []
                     });
@@ -127,7 +123,7 @@ You have three minute to respond.\n
         collector.on('end', collected => {
             if (!collected.size) {
                 panelMessage.edit({
-                    content: '⏱ Panel expired without response.',
+                    content: 'Panel expired without response.',
                     embeds: [],
                     components: []
                 });
