@@ -1,75 +1,39 @@
-const { EmbedBuilder } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
+require('dotenv').config();
+const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.js');
 
-const AFK_FILE = path.join(__dirname, 'afk.json');
+// === Bot Setup ===
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers
+    ],
+    partials: [Partials.Channel]
+});
 
-// Load persistent AFK data
-let afkUsers = {};
-if (fs.existsSync(AFK_FILE)) {
-    afkUsers = JSON.parse(fs.readFileSync(AFK_FILE, 'utf-8'));
-}
+// === In-Memory AFK Storage ===
+const afkUsers = new Map();
 
-module.exports = {
-    name: 'afk',
-    description: 'Set yourself as AFK with an optional reason',
-    async execute(message, args, client) {
-        // Internal listener for messages
-        if (!client.afkListenerAdded) {
-            client.on('messageCreate', async (msg) => {
-                if (msg.author.bot) return;
-                const userId = msg.author.id;
+// === Owner/Admin IDs for help ===
+const OWNER_IDS = [
+    '1112091588462649364', // OWNER_ID
+    '1165152007418560612'  // SERVER_OWNER
+];
 
-                // Remove AFK if user sends a message
-                if (afkUsers[userId]) {
-                    const afkData = afkUsers[userId];
-                    const duration = Date.now() - afkData.timestamp;
+// === Command Handling ===
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
 
-                    delete afkUsers[userId];
-                    fs.writeFileSync(AFK_FILE, JSON.stringify(afkUsers, null, 2));
+    const args = message.content.trim().split(/ +/g);
+    const command = args.shift()?.toLowerCase();
 
-                    const embed = new EmbedBuilder()
-                        .setTitle('✅ Welcome back!')
-                        .setDescription(`You were AFK for ${msToTime(duration)}`)
-                        .setColor('#2ecc71')
-                        .setFooter({ text: 'AFK removed' })
-                        .setTimestamp();
+    const userId = message.author.id;
 
-                    await msg.channel.send({ content: `<@${userId}>`, embeds: [embed] });
-                }
-
-                // Notify if mentioned users are AFK
-                if (msg.mentions.members.size > 0) {
-                    msg.mentions.members.forEach(mention => {
-                        if (afkUsers[mention.id]) {
-                            const afkData = afkUsers[mention.id];
-                            const duration = Date.now() - afkData.timestamp;
-
-                            const embed = new EmbedBuilder()
-                                .setTitle('💤 User is AFK')
-                                .setDescription(`${mention.user.tag} is currently AFK: **${afkData.reason}**`)
-                                .addFields({ name: 'AFK for', value: msToTime(duration), inline: true })
-                                .setColor('#f1c40f')
-                                .setTimestamp();
-
-                            msg.channel.send({ embeds: [embed] });
-                        }
-                    });
-                }
-            });
-            client.afkListenerAdded = true; // only add listener once
-        }
-
-        // Set AFK
+    // === AFK Command ===
+    if (command === '.afk') {
         const reason = args.join(' ') || 'AFK';
-        const userId = message.author.id;
-
-        afkUsers[userId] = {
-            reason,
-            timestamp: Date.now()
-        };
-
-        fs.writeFileSync(AFK_FILE, JSON.stringify(afkUsers, null, 2));
+        afkUsers.set(userId, { reason, timestamp: Date.now() });
 
         const embed = new EmbedBuilder()
             .setTitle('💤 You are now AFK')
@@ -80,9 +44,78 @@ module.exports = {
 
         return message.channel.send({ embeds: [embed] });
     }
-};
 
-// Helper function
+    // === Owner/Admin Help Command ===
+    if (command === '.ownerhelp') {
+        if (!OWNER_IDS.includes(userId)) {
+            return message.channel.send({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor('#e74c3c')
+                        .setDescription('❌ You are not allowed to use this command.')
+                ]
+            });
+        }
+
+        const embed = new EmbedBuilder()
+            .setTitle('🛡️ Owner/Admin Command Help')
+            .setDescription('Here is a list of commands only OWNER and SERVER_OWNER can use. Use wisely! :sparkles:')
+            .setColor('#1abc9c')
+            .addFields(
+                { name: '💤 AFK', value: '`.afk [reason]` — Set yourself AFK with optional reason', inline: false },
+                { name: '💬 DM', value: '`.dm <@user> <message>` — Send a direct message to a user', inline: false },
+                { name: '👢 Kick', value: '`.kick <@user> [reason]` — Kick a user from the server', inline: false },
+                { name: '⏱️ Timeout', value: '`.timeout <@user> <duration>` — Timeout a user', inline: false },
+                { name: '🔓 Unban', value: '`.unban <userID>` — Unban a user', inline: false },
+                { name: '⏲️ Untimeout', value: '`.untimeout <@user>` — Remove a timeout from a user', inline: false },
+                { name: '⚠️ Warn', value: '`.warn <@user> [reason]` — Warn a user', inline: false },
+                { name: '📋 Warnings', value: '`.warnings <@user>` — Check user warnings', inline: false },
+                { name: '❌ Unwarn', value: '`.unwarn <@user> [warnID]` — Remove a specific warning', inline: false },
+                { name: '🎭 Role', value: '`.role add/remove <@user> <role>` — Add or remove a role', inline: false }
+            )
+            .setFooter({ text: `Requested by ${message.author.tag}`, iconURL: message.author.displayAvatarURL() })
+            .setTimestamp();
+
+        return message.channel.send({ embeds: [embed] });
+    }
+
+    // === Remove AFK if user sends a message ===
+    if (afkUsers.has(userId)) {
+        const afkData = afkUsers.get(userId);
+        const duration = Date.now() - afkData.timestamp;
+        afkUsers.delete(userId);
+
+        const backEmbed = new EmbedBuilder()
+            .setTitle('✅ Welcome back!')
+            .setDescription(`You were AFK for **${msToTime(duration)}**`)
+            .setColor('#2ecc71')
+            .setFooter({ text: 'AFK removed' })
+            .setTimestamp();
+
+        await message.channel.send({ content: `<@${userId}>`, embeds: [backEmbed] });
+    }
+
+    // === Notify if mentioned users are AFK ===
+    if (message.mentions.members.size > 0) {
+        message.mentions.members.forEach(mention => {
+            if (afkUsers.has(mention.id)) {
+                const afkData = afkUsers.get(mention.id);
+                const duration = Date.now() - afkData.timestamp;
+
+                const afkEmbed = new EmbedBuilder()
+                    .setTitle('💤 User is AFK')
+                    .setDescription(`${mention.user.tag} is currently AFK: **${afkData.reason}**`)
+                    .addFields({ name: 'AFK for', value: msToTime(duration), inline: true })
+                    .setColor('#f1c40f')
+                    .setTimestamp();
+
+                message.channel.send({ embeds: [afkEmbed] });
+            }
+        });
+    }
+});
+
+// === Helper Function ===
 function msToTime(duration) {
     let seconds = Math.floor((duration / 1000) % 60),
         minutes = Math.floor((duration / (1000 * 60)) % 60),
@@ -96,3 +129,6 @@ function msToTime(duration) {
     if (seconds) parts.push(`${seconds}s`);
     return parts.join(' ') || '0s';
 }
+
+// === Login ===
+client.login(process.env.TOKEN);
