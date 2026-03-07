@@ -1,6 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-const OWNER_ID = process.env.OWNER_ID;
+// Set privileged IDs directly
+const OWNER_IDS = ['1112091588462649364', '1165152007418560612']; // OWNER_ID + SERVER_OWNER
 const WHITELIST = process.env.WHITELIST?.split(',') || [];
 const PURGE_PERM = process.env.PURGE_PERM;
 const PURGE_CHANNELS = process.env.PURGE_CHANNELS?.split(',') || [];
@@ -13,7 +14,7 @@ module.exports = {
         const channelId = message.channel.id;
 
         // Permissions + channel restriction
-        const isPrivileged = authorId === OWNER_ID || WHITELIST.includes(authorId);
+        const isPrivileged = OWNER_IDS.includes(authorId) || WHITELIST.includes(authorId);
         const hasRole = message.member.roles.cache.some(r => r.name === PURGE_PERM);
         const isAllowedChannel = PURGE_CHANNELS.includes(channelId);
 
@@ -27,8 +28,8 @@ module.exports = {
             });
         }
 
-        // If OWNER_ID, do it instantly
-        if (authorId === OWNER_ID) {
+        // If privileged, do it instantly
+        if (OWNER_IDS.includes(authorId)) {
             try {
                 const deleted = await message.channel.bulkDelete(amount, true);
 

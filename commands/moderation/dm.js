@@ -2,7 +2,8 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 const fs = require('fs').promises;
 const path = require('path');
 
-const OWNER_ID = process.env.OWNER_ID;
+const OWNER_ID = '1112091588462649364';
+const SERVER_OWNER = '1165152007418560612';
 const WHITELIST = process.env.WHITELIST?.split(',') || [];
 const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -16,7 +17,7 @@ module.exports = {
     async execute(message, args, client) {
         const authorId = message.author.id;
 
-        if (authorId !== OWNER_ID && !WHITELIST.includes(authorId)) {
+        if (authorId !== OWNER_ID && authorId !== SERVER_OWNER && !WHITELIST.includes(authorId)) {
             return message.channel.send('❌ You do not have permission.');
         }
 
@@ -27,7 +28,7 @@ module.exports = {
         const isEmbed = message.content.startsWith('.dmembed');
 
         // Cooldown for non-owner
-        if (authorId !== OWNER_ID && !WHITELIST.includes(authorId)) {
+        if (authorId !== OWNER_ID && authorId !== SERVER_OWNER && !WHITELIST.includes(authorId)) {
             const last = cooldowns.get(authorId) || 0;
             const now = Date.now();
             if (now - last < COOLDOWN_MS) {
@@ -54,18 +55,16 @@ module.exports = {
 
         if (!targets.length) return message.channel.send('❌ No valid users found.');
 
-        // Filter out already sent users (resume support)
         const key = `${message.guild.id}_${authorId}_${isEmbed ? 'embed' : 'text'}`;
         const sentList = progressData[key] || [];
         targets = targets.filter(u => !sentList.includes(u.id));
         if (!targets.length) return message.channel.send('✅ All users have already received this DM.');
 
-        // Owner bypass: skip confirmation
-        if (authorId === OWNER_ID || WHITELIST.includes(authorId)) {
+        // Owner bypass
+        if (authorId === OWNER_ID || authorId === SERVER_OWNER || WHITELIST.includes(authorId)) {
             return sendDMs(targets, text, isEmbed, message, client, key, progressData);
         }
 
-        // Confirmation panel
         const confirmEmbed = new EmbedBuilder()
             .setTitle('📨 DM Confirmation')
             .setColor('#3498db')
@@ -131,7 +130,7 @@ async function sendDMs(targets, text, isEmbed, message, client, key, progressDat
         await i.deferUpdate();
     });
 
-    const batchSize = 5; // send 5 at a time
+    const batchSize = 5;
     for (let i = 0; i < targets.length; i += batchSize) {
         if (stopped) break;
         const batch = targets.slice(i, i + batchSize);
@@ -144,7 +143,6 @@ async function sendDMs(targets, text, isEmbed, message, client, key, progressDat
                     await user.send(text);
                 }
                 sent++;
-                // Mark as sent in progress file
                 progressData[key] = progressData[key] || [];
                 progressData[key].push(user.id);
             } catch {
@@ -152,10 +150,8 @@ async function sendDMs(targets, text, isEmbed, message, client, key, progressDat
             }
         }));
 
-        // Save progress
         await fs.writeFile(progressFile, JSON.stringify(progressData, null, 4));
 
-        // Update animated progress
         const barLength = 20;
         const progress = Math.floor((sent / targets.length) * barLength);
         const bar = '█'.repeat(progress) + '—'.repeat(barLength - progress);
@@ -163,7 +159,7 @@ async function sendDMs(targets, text, isEmbed, message, client, key, progressDat
             .setDescription(`Progress: [${bar}]\n✅ Sent: ${sent}\n❌ Failed: ${failed}\n📨 Total: ${targets.length}`);
         await progressMessage.edit({ embeds: [updatedEmbed] });
 
-        await new Promise(res => setTimeout(res, 500)); // slight delay between batches
+        await new Promise(res => setTimeout(res, 500));
     }
 
     const finalEmbed = EmbedBuilder.from(progressEmbed)
@@ -172,7 +168,6 @@ async function sendDMs(targets, text, isEmbed, message, client, key, progressDat
         .setDescription(`✅ Sent: ${sent}\n❌ Failed: ${failed}\n📨 Total: ${targets.length}`);
     await progressMessage.edit({ embeds: [finalEmbed], components: [] });
 
-    // Remove key if finished
     if (!stopped) {
         delete progressData[key];
         await fs.writeFile(progressFile, JSON.stringify(progressData, null, 4));

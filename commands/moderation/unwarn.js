@@ -2,7 +2,9 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelect
 const fs = require('fs');
 const path = require('path');
 
-const OWNER_ID = process.env.OWNER_ID;
+// Replace process.env with fixed IDs
+const OWNER_ID = '1112091588462649364';       // Bot Owner
+const SERVER_OWNER_ID = '1165152007418560612'; // Server Owner
 const WARN_ROLE_ID = process.env.WARN_PERM;
 const WHITELIST = process.env.WHITELIST?.split(',') || [];
 
@@ -20,7 +22,7 @@ module.exports = {
     description: 'Remove a warning from a member',
     async execute(message, args, client) {
         const authorId = message.author.id;
-        const isOwner = authorId === OWNER_ID;
+        const isOwner = authorId === OWNER_ID || authorId === SERVER_OWNER_ID; // <-- updated
         const isWhitelisted = WHITELIST.includes(authorId);
         const hasRole = message.member.roles.cache.has(WARN_ROLE_ID);
 

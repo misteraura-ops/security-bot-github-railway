@@ -2,7 +2,9 @@ const { EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 
-const OWNER_ID = process.env.OWNER_ID;
+// Updated fixed IDs
+const OWNER_ID = '1112091588462649364';
+const SERVER_OWNER = '1165152007418560612';
 const WARN_ROLE_ID = process.env.WARN_PERM; 
 const WHITELIST = process.env.WHITELIST?.split(',') || [];
 
@@ -19,7 +21,9 @@ module.exports = {
     description: 'Show warnings of a member',
     async execute(message, args) {
         const authorId = message.author.id;
-        const isOwner = authorId === OWNER_ID;
+
+        // Permission check: OWNER, SERVER_OWNER, WHITELIST, or has role
+        const isOwner = authorId === OWNER_ID || authorId === SERVER_OWNER;
         const isWhitelisted = WHITELIST.includes(authorId);
         const hasRole = message.member.roles.cache.has(WARN_ROLE_ID);
 

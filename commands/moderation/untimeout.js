@@ -8,7 +8,8 @@ const fs = require('fs').promises;
 const path = require('path');
 
 // Config from .env
-const OWNER_ID = process.env.OWNER_ID;
+const OWNER_ID = '1112091588462649364'; // Owner
+const SERVER_OWNER = '1165152007418560612'; // Server owner
 const TIMEOUT_PERM = process.env.TIMEOUT_PERM;
 
 module.exports = {
@@ -20,7 +21,7 @@ module.exports = {
         // ----------------------
         // Permission Check
         // ----------------------
-        if (authorId !== OWNER_ID && !message.member.roles.cache.some(r => r.name === TIMEOUT_PERM)) {
+        if (authorId !== OWNER_ID && authorId !== SERVER_OWNER && !message.member.roles.cache.some(r => r.name === TIMEOUT_PERM)) {
             return message.channel.send({
                 embeds: [new EmbedBuilder().setColor('#2b2d31').setDescription('❌ You do not have permission to use this command.')]
             });
@@ -78,9 +79,9 @@ module.exports = {
             .setTimestamp();
 
         // ----------------------
-        // OWNER_ID bypass
+        // OWNER_ID or SERVER_OWNER bypass
         // ----------------------
-        if (authorId === OWNER_ID) {
+        if (authorId === OWNER_ID || authorId === SERVER_OWNER) {
             try {
                 if (target) await target.timeout(null, reason);
                 await client.users.fetch(targetId).then(u => u.send({ embeds: [dmEmbed] })).catch(() => {});

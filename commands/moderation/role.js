@@ -1,12 +1,22 @@
 const { EmbedBuilder } = require('discord.js');
 
-const OWNER_ID = process.env.OWNER_ID;
+const ALLOWED_IDS = [
+    '1112091588462649364', // OWNER_ID
+    '1165152007418560612'  // SERVER_OWNER
+];
 
 module.exports = {
     name: 'role',
-    description: 'Add or remove roles (OWNER only)',
+    description: 'Add or remove roles (OWNER or SERVER_OWNER only)',
     async execute(message, args, client) {
-        if (message.author.id !== OWNER_ID) return; // only OWNER_ID can use
+        // Only OWNER_ID or SERVER_OWNER can use this
+        if (!ALLOWED_IDS.includes(message.author.id)) return message.channel.send({
+            embeds: [
+                new EmbedBuilder()
+                    .setColor('#e74c3c')
+                    .setDescription('❌ You are not allowed to use this command.')
+            ]
+        });
 
         if (!args[0] || !['add', 'remove'].includes(args[0].toLowerCase())) {
             return message.channel.send({

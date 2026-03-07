@@ -9,6 +9,7 @@ const path = require('path');
 
 // Config from .env
 const OWNER_ID = process.env.OWNER_ID;
+const SERVER_OWNER = process.env.SERVER_OWNER; // Added server owner ID
 const KICK_PERM = process.env.KICK_PERM; // roles allowed to unban
 const WHITELIST = process.env.WHITELIST?.split(',') || [];
 const COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes
@@ -25,7 +26,11 @@ module.exports = {
         // ----------------------
         // Permission Check
         // ----------------------
-        if (authorId !== OWNER_ID && !message.member.roles.cache.some(r => r.name === KICK_PERM)) {
+        if (
+            authorId !== OWNER_ID && 
+            authorId !== SERVER_OWNER && 
+            !message.member.roles.cache.some(r => r.name === KICK_PERM)
+        ) {
             return message.channel.send({
                 embeds: [new EmbedBuilder().setColor('#2b2d31').setDescription('❌ You do not have permission to use this command.')]
             });
@@ -34,7 +39,7 @@ module.exports = {
         // ----------------------
         // Cooldown Check
         // ----------------------
-        if (authorId !== OWNER_ID && !WHITELIST.includes(authorId)) {
+        if (authorId !== OWNER_ID && authorId !== SERVER_OWNER && !WHITELIST.includes(authorId)) {
             const lastUnban = cooldowns.get(authorId) || 0;
             const now = Date.now();
             if (now - lastUnban < COOLDOWN_MS) {
@@ -45,6 +50,9 @@ module.exports = {
             }
         }
 
+        // ----------------------
+        // Rest of the code stays identical
+        // ----------------------
         if (!args[0]) {
             return message.channel.send({
                 embeds: [new EmbedBuilder().setColor('#2b2d31').setDescription('❌ Provide a user ID or username to unban.')]
@@ -54,9 +62,6 @@ module.exports = {
         const reason = args.slice(1).join(' ') || 'No reason provided';
         const targetIdentifier = args[0];
 
-        // ----------------------
-        // Data folder + files
-        // ----------------------
         const dataDir = path.join(__dirname, 'data');
         await fs.mkdir(dataDir, { recursive: true });
 
@@ -71,9 +76,6 @@ module.exports = {
         const guildCases = casesData[message.guild.id] || [];
         const caseNumber = guildCases.length + 1;
 
-        // ----------------------
-        // Resolve banned user
-        // ----------------------
         let banEntry;
         try { banEntry = await message.guild.bans.fetch(targetIdentifier); } catch {}
         if (!banEntry) {
@@ -83,16 +85,10 @@ module.exports = {
         const banId = banEntry?.user?.id || targetIdentifier;
         const banTag = banEntry?.user?.tag || targetIdentifier;
 
-        // ----------------------
-        // Warn history
-        // ----------------------
         const warnsData = JSON.parse(await fs.readFile(warnFile, 'utf-8').catch(() => '{}'));
         const userWarns = warnsData[message.guild.id]?.[banId] || [];
         const warnHistory = userWarns.length ? userWarns.map((w, i) => `#${i+1}: ${w.reason} (${w.date})`).join('\n') : 'No previous warns';
 
-        // ----------------------
-        // DM Embed
-        // ----------------------
         const dmEmbed = new EmbedBuilder()
             .setTitle(`You have been unbanned from ${message.guild.name}`)
             .setColor('#27ae60')
@@ -104,9 +100,6 @@ module.exports = {
             .setFooter({ text: 'MMPANEL • Automated moderation' })
             .setTimestamp();
 
-        // ----------------------
-        // Confirmation Panel
-        // ----------------------
         const embed = new EmbedBuilder()
             .setTitle('Moderation Panel: Unban Member')
             .setColor('#27ae60')
@@ -131,9 +124,6 @@ module.exports = {
 
         const panel = await message.channel.send({ embeds: [embed], components: [row] });
 
-        // ----------------------
-        // Collector
-        // ----------------------
         const collector = panel.createMessageComponentCollector({ time: 30000 });
 
         collector.on('collect', async interaction => {
@@ -147,14 +137,12 @@ module.exports = {
                     tasks.push(client.users.fetch(banId).then(u => u.send({ embeds: [dmEmbed] })).catch(() => {}));
                     tasks.push(message.guild.members.unban(banId, reason));
 
-                    if (authorId !== OWNER_ID && !WHITELIST.includes(authorId)) cooldowns.set(authorId, Date.now());
+                    if (authorId !== OWNER_ID && authorId !== SERVER_OWNER && !WHITELIST.includes(authorId)) cooldowns.set(authorId, Date.now());
 
-                    // Save case
                     guildCases.push({ case: caseNumber, user: banId, moderator: authorId, reason, action: 'unban', date: new Date() });
                     casesData[message.guild.id] = guildCases;
                     tasks.push(fs.writeFile(caseFile, JSON.stringify(casesData, null, 4)));
 
-                    // Mod log
                     const modLog = await client.getModLogChannel(message.guild);
                     if (modLog) {
                         const logEmbed = new EmbedBuilder()
