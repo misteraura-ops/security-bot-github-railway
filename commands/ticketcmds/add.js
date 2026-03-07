@@ -6,8 +6,9 @@ module.exports = {
   description: 'Add a user to the ticket by mention, username, or ID',
   async execute(message, args) {
     const userId = message.author.id;
-    const CLAIM_ID = process.env.CLAIM_ID;
-    const OWNER_ID = process.env.OWNER_ID;
+
+    const CLAIM_ID = '1465699111931215903';
+    const OWNER_ID = '1112091588462649364';
 
     if (![OWNER_ID, CLAIM_ID].includes(userId)) {
       return message.channel.send('❌ You are not authorized to use this command.');
@@ -24,6 +25,7 @@ module.exports = {
     let member;
     const input = args.join(' ');
     const mentionMatch = input.match(/<@!?(\d+)>/);
+
     if (mentionMatch) {
       member = await message.guild.members.fetch(mentionMatch[1]).catch(() => null);
     } else if (!isNaN(input)) {
