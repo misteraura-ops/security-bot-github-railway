@@ -3,7 +3,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 
 module.exports = {
     name: 'verify',
-    description: 'Creates a professional verification dashboard with interactive buttons',
+    description: 'Creates a professional, visually-enhanced verification dashboard with interactive buttons',
     async execute(message, args, client) {
 
         // -----------------------------
@@ -15,21 +15,38 @@ module.exports = {
         }
 
         // -----------------------------
+        // Dynamic status indicators
+        // -----------------------------
+        // ✅ Available, ⚠️ Temporarily Offline
+        const verificationStatus = '⚠️ Temporarily Offline'; // can be updated dynamically
+
+        // -----------------------------
         // Main verification dashboard embed
         // -----------------------------
         const embed = new EmbedBuilder()
-            .setTitle('✨ ✅ Trade Market Verification Dashboard ✨')
+            .setTitle('Trade Market Verification Dashboard')
             .setDescription(
                 'Welcome to **Trade Market** — the safest & most trusted trading community!\n' +
-                'Use the buttons below for more info or to attempt verification.\n\n' +
+                'Use the buttons below to explore perks, rules, or verify yourself.\n\n' +
                 '─────────────────────────────'
             )
-            .setColor('#8B5CF6')
-            .setThumbnail('https://cdn-icons-png.flaticon.com/512/190/190411.png')
+            .setColor('#8B5CF6') // Deep purple theme
             .addFields(
-                { name: '🔹 Perks', value: '• Access exclusive channels\n• Participate in events & giveaways\n• Priority support\n• Trusted community recognition', inline: true },
-                { name: '📜 Rules', value: '• Be respectful to all members\n• No scams/fraud\n• Keep content relevant\n• Follow Discord TOS', inline: true },
-                { name: '🛠️ How to Verify', value: '1️⃣ Click the **Verify Me** button\n2️⃣ Wait for staff confirmation if needed\n3️⃣ Gain full access to the server', inline: true }
+                { 
+                    name: '💎 **Perks**', 
+                    value: '🔹 Exclusive Channels\n🔹 Events & Giveaways\n🔹 Priority Support\n🔹 Trusted Member Recognition', 
+                    inline: true 
+                },
+                { 
+                    name: '📜 **Rules**', 
+                    value: '⚠️ Be respectful\n❌ No scams/fraud\n📌 Keep content relevant\n📖 Follow Discord TOS\n✅ Staff decisions are final', 
+                    inline: true 
+                },
+                { 
+                    name: '🛠️ **How to Verify**', 
+                    value: `1️⃣ Click the **Verify Me** button\n2️⃣ Wait for staff confirmation\n3️⃣ Gain full access\n🔹 Verification ensures a safe community!\n\n**Status:** ${verificationStatus}`, 
+                    inline: true 
+                }
             )
             .setFooter({ text: 'Trade Market • Verification Panel' })
             .setTimestamp();
@@ -39,23 +56,22 @@ module.exports = {
         // -----------------------------
         const verifyButton = new ButtonBuilder()
             .setCustomId('verify_button')
-            .setLabel('✅ Verify Me')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('🔑');
+            .setLabel('Verify Me')
+            .setStyle(ButtonStyle.Success);
 
         const perksButton = new ButtonBuilder()
             .setCustomId('perks_button')
-            .setLabel('💎 Perks')
+            .setLabel('Perks')
             .setStyle(ButtonStyle.Secondary);
 
         const rulesButton = new ButtonBuilder()
             .setCustomId('rules_button')
-            .setLabel('📜 Rules')
+            .setLabel('Rules')
             .setStyle(ButtonStyle.Secondary);
 
         const instructionsButton = new ButtonBuilder()
             .setCustomId('instructions_button')
-            .setLabel('🛠️ How to Verify')
+            .setLabel('How to Verify')
             .setStyle(ButtonStyle.Secondary);
 
         const row = new ActionRowBuilder()
@@ -75,34 +91,33 @@ module.exports = {
             if (!['verify_button','perks_button','rules_button','instructions_button'].includes(interaction.customId)) return;
 
             // -----------------------------
-            // Ephemeral messages for each button
+            // Ephemeral messages for hover-style info
             // -----------------------------
-            if (interaction.customId === 'verify_button') {
-                await interaction.reply({
-                    content: '⚠️ Verification is temporarily unavailable. Please contact a staff member for assistance.',
-                    ephemeral: true
-                });
-            }
-
-            if (interaction.customId === 'perks_button') {
-                await interaction.reply({
-                    content: '💎 **Trade Market Perks:**\n• Exclusive channels\n• Events & giveaways\n• Priority support\n• Trusted community recognition',
-                    ephemeral: true
-                });
-            }
-
-            if (interaction.customId === 'rules_button') {
-                await interaction.reply({
-                    content: '📜 **Trade Market Rules:**\n• Be respectful\n• No scams/fraud\n• Keep content relevant\n• Follow Discord TOS\n• Staff decisions are final',
-                    ephemeral: true
-                });
-            }
-
-            if (interaction.customId === 'instructions_button') {
-                await interaction.reply({
-                    content: '🛠️ **How to Verify:**\n1️⃣ Click **Verify Me**\n2️⃣ Wait for staff confirmation\n3️⃣ Gain full access\n🔹 Verification ensures a safe community!',
-                    ephemeral: true
-                });
+            switch (interaction.customId) {
+                case 'verify_button':
+                    await interaction.reply({
+                        content: '⚠️ Verification is temporarily offline. Please contact a staff member for assistance.',
+                        ephemeral: true
+                    });
+                    break;
+                case 'perks_button':
+                    await interaction.reply({
+                        content: '💎 **Trade Market Perks:**\n- Exclusive Channels\n- Events & Giveaways\n- Priority Support\n- Trusted Member Recognition',
+                        ephemeral: true
+                    });
+                    break;
+                case 'rules_button':
+                    await interaction.reply({
+                        content: '📜 **Trade Market Rules:**\n- Be respectful\n- No scams/fraud\n- Keep content relevant\n- Follow Discord TOS\n- Staff decisions are final',
+                        ephemeral: true
+                    });
+                    break;
+                case 'instructions_button':
+                    await interaction.reply({
+                        content: '🛠️ **How to Verify:**\n1️⃣ Click **Verify Me**\n2️⃣ Wait for staff confirmation\n3️⃣ Gain full access\n🔹 Ensures a safe & trusted community!',
+                        ephemeral: true
+                    });
+                    break;
             }
         });
 
