@@ -1,6 +1,8 @@
 // events/guildInvite.js
 const { EmbedBuilder } = require('discord.js');
 
+const inviteCache = new Map();
+
 module.exports = {
     name: 'guildMemberAdd',
     async execute(member, client) {
@@ -9,17 +11,43 @@ module.exports = {
             const inviteChannel = await member.guild.channels.fetch(INVITE_CHANNEL_ID).catch(() => null);
             if (!inviteChannel) return;
 
-            // Professional invite panel
+            const newInvites = await member.guild.invites.fetch();
+            const oldInvites = inviteCache.get(member.guild.id);
+
+            let usedInvite = null;
+
+            if (oldInvites) {
+                usedInvite = newInvites.find(i => {
+                    const old = oldInvites.get(i.code);
+                    return old && i.uses > old.uses;
+                });
+            }
+
+            inviteCache.set(
+                member.guild.id,
+                new Map(newInvites.map(inv => [inv.code, inv]))
+            );
+
+            const inviter = usedInvite?.inviter || 'Unknown';
+            const inviteCode = usedInvite?.code || 'Unknown';
+            const inviteUses = usedInvite?.uses || 'Unknown';
+
             const embed = new EmbedBuilder()
-                .setTitle('🎉 New Member Invited!')
-                .setDescription(`${member} has joined the server via an invite!`)
-                .setColor('#1F2937') // dark professional tone
-                .addFields(
-                    { name: 'Member', value: `${member}`, inline: true },
-                    { name: 'Server', value: member.guild.name, inline: true },
-                    { name: 'Member Count', value: `${member.guild.memberCount}`, inline: true }
+                .setTitle('🎉 New Member Joined!')
+                .setDescription(
+                    `✨ ${member} has joined **Trade Market**!\n\n` +
+                    `Welcome to the marketplace — trade safely and enjoy the community.`
                 )
-                .setFooter({ text: 'Eldorado.gg Invite Tracker • Bot' })
+                .setColor('#8B5CF6')
+                .addFields(
+                    { name: '👤 Member', value: `${member}`, inline: true },
+                    { name: '📨 Invited By', value: `${inviter}`, inline: true },
+                    { name: '🔗 Invite Code', value: `${inviteCode}`, inline: true },
+                    { name: '📊 Invite Uses', value: `${inviteUses}`, inline: true },
+                    { name: '🏪 Server', value: 'Trade Market', inline: true },
+                    { name: '📈 Member Count', value: `${member.guild.memberCount}`, inline: true }
+                )
+                .setFooter({ text: 'Trade Market • Invite Tracker' })
                 .setTimestamp();
 
             inviteChannel.send({ embeds: [embed] });
@@ -27,5 +55,5 @@ module.exports = {
         } catch (err) {
             console.error('Error in guildInvite event:', err);
         }
-    }
+    },
 };
