@@ -21,12 +21,12 @@ module.exports = {
     ];
 
     // -----------------------------
-    // Enhanced yellow-themed embed panel
+    // Enhanced panel embed
     // -----------------------------
     const embed = new EmbedBuilder()
-      .setTitle('🔒 Eldorado.gg • Official Middleman Service')
+      .setTitle('🔒 Trade Market • Official Middleman Service')
       .setDescription(
-        `Welcome to **_Eldorado.gg Secure Middleman System_** — your trades are **safe, verified, and professional**.\n\n` +
+        `Welcome to **_Trade Market Secure Middleman System_** — your trades are **safe, verified, and professional**.\n\n` +
         `✨ **Verified Middlemen Ensure:**\n` +
         `• 🛡️ **Safe Transactions** — all assets protected\n` +
         `• ❌ **Zero Scam Tolerance** — strict rules enforced\n` +
@@ -47,8 +47,8 @@ module.exports = {
         `• 📚 All tickets are **logged & archived**\n\n` +
         `\u200B\n📌 **Select your trade category below to begin**\n🎯 Make your trade **fast, safe, and professional!**`
       )
-      .setColor('#FFD700') // bright yellow/gold
-      .setFooter({ text: 'Eldorado.gg MM Panel', iconURL: client.user.displayAvatarURL() })
+      .setColor('#8B5CF6')
+      .setFooter({ text: 'Trade Market MM Panel', iconURL: client.user.displayAvatarURL() })
       .setTimestamp();
 
     // -----------------------------
@@ -61,7 +61,7 @@ module.exports = {
         categories.map(c => ({
           label: `【${c.emoji}】 ${c.label}`,
           value: c.value,
-          description: c.desc, // acts like tooltip
+          description: c.desc,
         }))
       );
 
