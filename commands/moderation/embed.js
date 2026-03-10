@@ -34,8 +34,8 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setTitle(title)
       .setDescription(description)
-      .setColor('#FFD700') // Gold/yellow theme
-      .setFooter({ text: 'Eldorado.gg Custom Embed' })
+      .setColor('#8B5CF6') // Purple theme
+      .setFooter({ text: 'Trade Market' })
       .setTimestamp();
 
     await message.channel.send({ embeds: [embed] });
