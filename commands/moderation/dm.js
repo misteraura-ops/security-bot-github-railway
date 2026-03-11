@@ -1,16 +1,12 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const fs = require('fs').promises;
-const path = require('path');
 
 const OWNER_ID = '1112091588462649364';
 const SERVER_OWNER = '1135999619541774386';
 const WHITELIST = process.env.WHITELIST?.split(',') || [];
-const DM_LOG_CHANNEL = process.env.DM_LOG_CHANNEL; // Logging channel from .env
+const DM_LOG_CHANNEL = process.env.DM_LOG_CHANNEL;
 const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 
 const cooldowns = new Map();
-const dataDir = path.join(__dirname, 'data');
-const progressFile = path.join(dataDir, 'dm_progress.json');
 
 module.exports = {
     name: 'dm',
@@ -37,9 +33,6 @@ module.exports = {
             }
         }
 
-        await fs.mkdir(dataDir, { recursive: true });
-        const progressData = JSON.parse(await fs.readFile(progressFile, 'utf-8').catch(() => '{}'));
-
         // ----------------------
         // Resolve targets
         // ----------------------
@@ -47,7 +40,7 @@ module.exports = {
         let rolesToPing = [];
         const targetArg = args[0];
 
-        // Check role first
+        // Role detection
         let role = null;
         const roleMention = targetArg.match(/^<@&(\d+)>$/);
         if (roleMention) role = message.guild.roles.cache.get(roleMention[1]);
@@ -56,25 +49,24 @@ module.exports = {
 
         if (role) {
             rolesToPing.push(role);
-            // Fetch all members of the role
-            await message.guild.members.fetch(); // fetch all guild members (required for huge server)
-            usersToDM.push(...role.members.map(m => m.user));
+            // Fetch all guild members (required for large servers)
+            await message.guild.members.fetch({ force: true });
+            // Exclude bots automatically
+            usersToDM.push(...role.members.filter(m => !m.user.bot).map(m => m.user));
         } else {
             // User detection
             const userMention = targetArg.match(/^<@!?(\d+)>$/);
-            if (userMention) {
-                const user = await client.users.fetch(userMention[1]).catch(() => null);
-                if (user) usersToDM.push(user);
-            } else if (!isNaN(targetArg)) {
-                const user = await client.users.fetch(targetArg).catch(() => null);
-                if (user) usersToDM.push(user);
-            } else {
+            let user = null;
+            if (userMention) user = await client.users.fetch(userMention[1]).catch(() => null);
+            else if (!isNaN(targetArg)) user = await client.users.fetch(targetArg).catch(() => null);
+            else {
                 const member = message.guild.members.cache.find(
                     m => m.user.username.toLowerCase() === targetArg.toLowerCase() ||
                          (m.nickname && m.nickname.toLowerCase() === targetArg.toLowerCase())
                 );
-                if (member) usersToDM.push(member.user);
+                if (member) user = member.user;
             }
+            if (user && !user.bot) usersToDM.push(user);
         }
 
         if (!usersToDM.length && !rolesToPing.length)
@@ -130,7 +122,7 @@ module.exports = {
 };
 
 // ----------------------
-// DM sender
+// DM sender optimized for huge servers
 // ----------------------
 async function sendDMs(users, text, isEmbed, message, client, rolesToPing) {
     const progressEmbed = new EmbedBuilder()
@@ -147,6 +139,7 @@ async function sendDMs(users, text, isEmbed, message, client, rolesToPing) {
     const progressMessage = await message.channel.send({ embeds: [progressEmbed], components: [cancelButton] });
 
     let sent = 0, failed = 0, stopped = false;
+
     const collector = progressMessage.createMessageComponentCollector({ time: 0 });
     collector.on('collect', async i => {
         if (i.user.id !== message.author.id) return i.reply({ content: 'Only the command executor can stop this.', ephemeral: true });
@@ -154,8 +147,9 @@ async function sendDMs(users, text, isEmbed, message, client, rolesToPing) {
         await i.deferUpdate();
     });
 
-    // Batch DM sending for stability
+    // Batch sending to avoid rate limits
     const batchSize = 5;
+    const delayMs = 1000; // 1 second between batches
     for (let i = 0; i < users.length; i += batchSize) {
         if (stopped) break;
         const batch = users.slice(i, i + batchSize);
@@ -178,13 +172,14 @@ async function sendDMs(users, text, isEmbed, message, client, rolesToPing) {
             }
         }));
 
+        // Update live progress
         const barLength = 20;
         const progress = Math.floor((sent / users.length) * barLength);
         const bar = '█'.repeat(progress) + '—'.repeat(barLength - progress);
         const updatedEmbed = EmbedBuilder.from(progressEmbed)
             .setDescription(`Progress: [${bar}]\n✅ Sent: ${sent}\n❌ Failed: ${failed}\n📨 Total: ${users.length}`);
         await progressMessage.edit({ embeds: [updatedEmbed] });
-        await new Promise(res => setTimeout(res, 500)); // slow for huge server
+        await new Promise(res => setTimeout(res, delayMs));
     }
 
     // Summary
