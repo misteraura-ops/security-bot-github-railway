@@ -16,11 +16,7 @@ function ensureDataFile() {
 
     if (!fs.existsSync(dataPath)) {
         fs.writeFileSync(dataPath, JSON.stringify({
-            traders: {},
-            global: {
-                totalProfit: 0,
-                totalTrades: 0
-            }
+            traders: {}
         }, null, 2));
     }
 }
@@ -57,18 +53,22 @@ module.exports = {
                 .setColor('#2b2d31')
                 .setDescription(`
 **Usage**
-\`$log <trader> <profit> <split>\`
+\`$log <h1t> <h1tter> <profit> <split>\`
 
 **Example**
-\`$log @Trader 1200 70/30\`
+\`$log @H1T @H1TTER 1200 70/30\`
 
 **Arguments**
 
-**Trader**
-Mention or user ID of the trader.
+**H1T**
+Mention or user ID.
+
+**H1TTER**
+Mention or user ID.
 
 **Profit**
-Total profit from the trade.
+Total trade profit.
+
 Examples:
 \`1200\`
 \`1,200\`
@@ -76,37 +76,34 @@ Examples:
 \`1.2k\`
 
 **Split**
-Profit split between trader and host.
-
-Examples:
-\`50/50\`
-\`60/40\`
-\`70/30\`
-
-**Attachments**
-You can attach screenshots or proof of the trade when sending the command.
+You can write anything here.
 
 Example:
-\`$log @User 1500 70/30\`
+\`$log @User1 @User2 1500 custom split\`
                 `);
 
             return message.channel.send({ embeds: [guide] });
         }
 
-        const traderArg = args[0];
-        const profitArg = args[1];
-        const splitArg = args[2];
+        const h1tArg = args[0];
+        const h1tterArg = args[1];
+        const profitArg = args[2];
+        const splitArg = args.slice(3).join(' ');
 
-        if (!traderArg || !profitArg || !splitArg) {
+        if (!h1tArg || !h1tterArg || !profitArg || !splitArg) {
             return message.reply('❌ Invalid usage. Run `$log` to see the guide.');
         }
 
-        const trader =
+        const h1t =
             message.mentions.users.first() ||
-            await message.client.users.fetch(traderArg).catch(() => null);
+            await message.client.users.fetch(h1tArg).catch(() => null);
 
-        if (!trader) {
-            return message.reply('❌ Trader not found.');
+        const h1tter =
+            message.mentions.users.at(1) ||
+            await message.client.users.fetch(h1tterArg).catch(() => null);
+
+        if (!h1t || !h1tter) {
+            return message.reply('❌ Could not find the users.');
         }
 
         const profit = parseProfit(profitArg);
@@ -115,41 +112,21 @@ Example:
             return message.reply('❌ Invalid profit amount.');
         }
 
-        if (!splitArg.includes('/')) {
-            return message.reply('❌ Invalid split format. Example: 70/30');
-        }
-
-        const splitParts = splitArg.split('/');
-        const traderPercent = Number(splitParts[0]);
-        const hostPercent = Number(splitParts[1]);
-
-        if (isNaN(traderPercent) || isNaN(hostPercent)) {
-            return message.reply('❌ Invalid split numbers.');
-        }
-
-        const traderShare = Math.floor((profit * traderPercent) / 100);
-        const hostShare = Math.floor((profit * hostPercent) / 100);
-
         ensureDataFile();
 
-        const data = JSON.parse(fs.readFileSync(dataPath));
+        let data = JSON.parse(fs.readFileSync(dataPath));
 
-        if (!data.traders[trader.id]) {
-            data.traders[trader.id] = {
+        if (!data.traders) data.traders = {};
+
+        if (!data.traders[h1t.id]) {
+            data.traders[h1t.id] = {
                 totalProfit: 0,
-                traderShare: 0,
-                hostShare: 0,
                 trades: 0
             };
         }
 
-        data.traders[trader.id].totalProfit += profit;
-        data.traders[trader.id].traderShare += traderShare;
-        data.traders[trader.id].hostShare += hostShare;
-        data.traders[trader.id].trades += 1;
-
-        data.global.totalProfit += profit;
-        data.global.totalTrades += 1;
+        data.traders[h1t.id].totalProfit += profit;
+        data.traders[h1t.id].trades += 1;
 
         fs.writeFileSync(dataPath, JSON.stringify(data, null, 2));
 
@@ -159,15 +136,13 @@ Example:
             .setTitle('💰 Trade Logged')
             .setColor('#2b2d31')
             .addFields(
-                { name: 'Trader', value: `<@${trader.id}>`, inline: true },
+                { name: 'Hit', value: `<@${h1t.id}>`, inline: true },
+                { name: 'Hitter', value: `<@${h1tter.id}>`, inline: true },
                 { name: 'Logged By', value: `<@${message.author.id}>`, inline: true },
                 { name: 'Profit', value: `$${profit.toLocaleString()}`, inline: true },
                 { name: 'Split', value: splitArg, inline: true },
-                { name: 'Trader Earned', value: `$${traderShare.toLocaleString()}`, inline: true },
-                { name: 'Host Earned', value: `$${hostShare.toLocaleString()}`, inline: true },
-                { name: 'Trader Total Trades', value: `${data.traders[trader.id].trades}`, inline: true },
-                { name: 'Trader Total Profit', value: `$${data.traders[trader.id].totalProfit.toLocaleString()}`, inline: true },
-                { name: 'Server Total Profit', value: `$${data.global.totalProfit.toLocaleString()}`, inline: true }
+                { name: 'Total Hits', value: `${data.traders[h1t.id].trades}`, inline: true },
+                { name: 'Hitter Profit', value: `$${data.traders[h1t.id].totalProfit.toLocaleString()}`, inline: true }
             )
             .setTimestamp();
 
