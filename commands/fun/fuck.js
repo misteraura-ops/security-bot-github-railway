@@ -18,7 +18,7 @@ module.exports = {
         // ----------------------
         // DISPLAY TEXT (editable)
         // ----------------------
-        const displayText = `💬 **${message.author} fucked ${target}** for the **1st time**`;
+        const displayText = ` **${message.author} fucked ${target}** for the **1st time**`;
         // <-- Edit this line to change the text format
 
         // ----------------------
