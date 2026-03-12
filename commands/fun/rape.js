@@ -4,7 +4,7 @@ module.exports = {
     // ----------------------
     // CHANGE THIS TO RENAME THE COMMAND
     // ----------------------
-    name: 'fuck', // <-- You can change this to anything like 'screenshot' or 'image'
+    name: 'rape', // <-- You can change this to anything like 'screenshot' or 'image'
     description: 'Display a screenshot or image in an embed.',
 
     async execute(message, args) {
@@ -13,12 +13,12 @@ module.exports = {
         // Get the mentioned user
         // ----------------------
         const target = message.mentions.users.first();
-        if (!target) return message.channel.send('❌ Please mention a user!');
+        if (!target) return message.channel.send('❌ Mention the bud u wanna rape!');
 
         // ----------------------
         // DISPLAY TEXT (editable)
         // ----------------------
-        const displayText = ` **${message.author} fucked ${target}** for the **1st time**`;
+        const displayText = ` **${message.author} raped ${target}** for the **1st time**. It was hard icl`;
         // <-- Edit this line to change the text format
 
         // ----------------------
