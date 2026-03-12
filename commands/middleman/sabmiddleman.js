@@ -9,39 +9,41 @@ module.exports = {
 
     async execute(message) {
 
+        // Only CLAIM_ROLE can run
         if (!message.member.roles.cache.has(CLAIM_ROLE)) return;
 
         const embed = new EmbedBuilder()
             .setTitle('🛡 Middleman Trade Procedure')
-            .setColor('#2b2d31')
-            .setDescription('Follow these steps to ensure a fair and secure middleman trade:')
+            .setColor('#5865F2') // Discord blurple for professional look
+            .setThumbnail('https://i.imgur.com/8KM1v8R.png') // optional MM icon
+            .setDescription('Follow these steps to ensure a **fair, secure, and transparent trade** using a middleman (MM).')
             .addFields(
                 {
-                    name: '1️⃣ Middleman Setup',
-                    value: 'The MM will use **two separate accounts**, one for each trader involved in the deal. Both parties must add the MM on their respective accounts before the trade begins.'
+                    name: '🔹 Step 1 – Middleman Setup',
+                    value: '**Two Accounts Required:** The MM uses separate accounts for each trader. Both parties must add the MM on their respective accounts before the trade begins.'
                 },
                 {
-                    name: '2️⃣ Item Collection Process',
-                    value: 'The MM will collect each party\'s items **one at a time**, following a clear and agreed order to ensure accountability and prevent confusion.'
+                    name: '🔹 Step 2 – Item Collection',
+                    value: '**Collect Items Sequentially:** Gather each party\'s items one at a time, following a clear order to avoid mistakes and ensure accountability.'
                 },
                 {
-                    name: '3️⃣ Trade Distribution',
-                    value: 'After all items are secured, the MM will rejoin the **same server using the alternate account** and distribute the items back to each party **in the exact order they were collected**.'
+                    name: '🔹 Step 3 – Trade Distribution',
+                    value: '**Return Items Safely:** After collecting, the MM rejoins the same server using the alternate account and returns items in the exact order they were collected.'
                 },
                 {
-                    name: '4️⃣ Security & Fairness',
-                    value: 'This structured process ensures the trade remains **fair, transparent, and secure** for all parties involved.'
+                    name: '🔹 Step 4 – Security & Fairness',
+                    value: 'This structured process ensures the trade remains **fair, transparent, and secure** for everyone involved.'
                 },
                 {
-                    name: '5️⃣ Optional Tip',
-                    value: 'The **final recipient** of the trade may optionally provide a tip to the MM as a courtesy. Tips are **not required** and may include Roblox items or real currency.'
+                    name: '🔹 Step 5 – Optional Tip',
+                    value: 'The final recipient may optionally provide a tip to the MM as a courtesy. Tips are **not mandatory** and can include Roblox items or real currency.'
                 },
                 {
-                    name: '⚠️ Confirmation',
-                    value: 'Both parties must confirm their agreement to this procedure before the trade begins.'
+                    name: '⚠️ Confirmation Required',
+                    value: '**Both parties must confirm agreement** to this procedure before starting the trade.'
                 }
             )
-            .setFooter({ text: 'Middleman Trade Guide' })
+            .setFooter({ text: 'Middleman Trade Guide • Follow these steps carefully' })
             .setTimestamp();
 
         message.channel.send({ embeds: [embed] });
