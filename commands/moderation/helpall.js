@@ -13,7 +13,7 @@ module.exports = {
             .addFields(
                 {
                     name: '💰 Economy',
-                    value: '`addmoney`, `balance`, `blackjack`, `buyhouse`, `coinflip`, `crypto`, `daily`, `deposit`, `dih`, `divorce`, `duel`, `gamble`, `heist`, `leaderboard`, `marry`, `profile`, `race`, `rob`, `setdihsize`, `shop`, `slots`, `withdraw`, `work`'
+                    value: '`addmoney`, `balance`, `blackjack`, `buyhouse`, `coinflip`, `crypto`, `daily`, `deposit`, `dih`, `divorce`, `duel`, `gamble`, `heist`, `leaderboard`, `marry`, `profile`, `race`, `rob`, `shop`, `slots`, `withdraw`, `work`'
                 },
                 {
                     name: '🎭 Fun',
