@@ -31,7 +31,7 @@ module.exports = {
         // Create the embed
         // ----------------------
         const embed = new EmbedBuilder()
-            .setTitle(`${target.tag} fucked ${target}`)
+            .setTitle(`${message.author}  fucked ${target}`)
             .setDescription(displayText)
             .setColor('#3498db')
             .setTimestamp()
