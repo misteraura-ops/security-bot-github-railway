@@ -20,6 +20,7 @@ module.exports = {
     if (!interaction.guild) return;
 
     const claimRoleId = "1465699111931215903";
+
     const allowedUsers = [
       process.env.OWNER_ID,
       process.env.SERVER_OWNER
@@ -56,7 +57,7 @@ module.exports = {
       if (!fs.existsSync(file)) return null;
 
       try {
-        return JSON.parse(fs.readFileSync(file));
+        return JSON.parse(fs.readFileSync(file, "utf8"));
       } catch {
         return null;
       }
@@ -68,16 +69,19 @@ module.exports = {
       const backup = getBackup(guildID);
       if (!backup) return false;
 
+      const targetGuild = client.guilds.cache.get(guildID);
+      if (!targetGuild) return false;
+
       const createdRoles = {};
 
       for (const role of backup.roles) {
 
         try {
 
-          const newRole = await guild.roles.create({
+          const newRole = await targetGuild.roles.create({
             name: role.name,
             color: role.color,
-            permissions: role.permissions,
+            permissions: BigInt(role.permissions),
             hoist: role.hoist,
             mentionable: role.mentionable
           });
@@ -90,7 +94,7 @@ module.exports = {
 
       for (const memberID in backup.members) {
 
-        const member = await guild.members.fetch(memberID).catch(() => null);
+        const member = await targetGuild.members.fetch(memberID).catch(() => null);
         if (!member) continue;
 
         for (const roleName of backup.members[memberID]) {
@@ -165,7 +169,10 @@ module.exports = {
       if (interaction.customId.startsWith("ignore_restore_")) {
 
         if (!allowedUsers.includes(interaction.user.id))
-          return safeReply({ content: "❌ Not allowed.", ephemeral: true });
+          return safeReply({
+            content: "❌ Not allowed.",
+            ephemeral: true
+          });
 
         return safeReply({
           content: "Restore ignored.",
@@ -335,9 +342,7 @@ Contact: ${contactMethod}`
               new EmbedBuilder()
                 .setColor("Green")
                 .setTitle("Ticket Claimed")
-                .setDescription(
-                  `<@${interaction.user.id}> claimed this ticket`
-                )
+                .setDescription(`<@${interaction.user.id}> claimed this ticket`)
             ]
           });
 
@@ -353,10 +358,7 @@ Contact: ${contactMethod}`
 
         case "ticket-close":
 
-          return ticketManager.closeTicket(
-            interaction.channel,
-            guild
-          );
+          return ticketManager.closeTicket(interaction.channel, guild);
 
       }
 
