@@ -159,10 +159,10 @@ client.on(Events.MessageCreate, async (message) => {
 
   if (!message.guild || message.author.bot) return;
 
-  if (stickCmd.stickyListener) {
-    stickCmd.stickyListener(message);
-  }
+  // Sticky system
+  if (stickCmd.stickyListener) stickCmd.stickyListener(message);
 
+  // Maintenance mode
   if (client.isMaintenance && message.author.id !== process.env.OWNER_ID) {
     return message.channel.send({
       embeds: [{
