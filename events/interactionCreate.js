@@ -1,3 +1,4 @@
+const fs = require("fs");
 const {
   Events,
   ActionRowBuilder,
@@ -6,54 +7,183 @@ const {
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
-  EmbedBuilder,
-  StringSelectMenuBuilder,
-} = require('discord.js');
-const ticketManager = require('../utils/ticketManager');
+  EmbedBuilder
+} = require("discord.js");
+
+const ticketManager = require("../utils/ticketManager");
 
 module.exports = {
   name: Events.InteractionCreate,
+
   async execute(interaction, client) {
 
     if (!interaction.guild) return;
 
-    const claimRoleId = '1465699111931215903';
-    const transcriptsChannelId = '1478762582994059305';
+    const claimRoleId = "1465699111931215903";
+    const allowedUsers = [
+      process.env.OWNER_ID,
+      process.env.SERVER_OWNER
+    ];
+
+    const guild = interaction.guild;
+
+    async function safeReply(msg) {
+      try {
+        if (interaction.replied) return;
+        if (interaction.deferred) return interaction.editReply(msg);
+        return interaction.reply(msg);
+      } catch {}
+    }
+
+    async function safeDefer() {
+      try {
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.deferReply({ ephemeral: true });
+        }
+      } catch {}
+    }
+
+    async function safeEdit(msg) {
+      try {
+        if (interaction.deferred) return interaction.editReply(msg);
+      } catch {}
+    }
+
+    function getBackup(guildID) {
+
+      const file = `./backups/${guildID}_roles.json`;
+
+      if (!fs.existsSync(file)) return null;
+
+      try {
+        return JSON.parse(fs.readFileSync(file));
+      } catch {
+        return null;
+      }
+
+    }
+
+    async function restoreRoles(guildID) {
+
+      const backup = getBackup(guildID);
+      if (!backup) return false;
+
+      const createdRoles = {};
+
+      for (const role of backup.roles) {
+
+        try {
+
+          const newRole = await guild.roles.create({
+            name: role.name,
+            color: role.color,
+            permissions: role.permissions,
+            hoist: role.hoist,
+            mentionable: role.mentionable
+          });
+
+          createdRoles[role.name] = newRole;
+
+        } catch {}
+
+      }
+
+      for (const memberID in backup.members) {
+
+        const member = await guild.members.fetch(memberID).catch(() => null);
+        if (!member) continue;
+
+        for (const roleName of backup.members[memberID]) {
+
+          const role = createdRoles[roleName];
+          if (role) await member.roles.add(role).catch(() => {});
+
+        }
+
+      }
+
+      return true;
+
+    }
 
     async function resolveMember(guild, input) {
+
       if (!input) return null;
 
       const mentionMatch = input.match(/<@!?(\d+)>/);
-      if (mentionMatch) return await guild.members.fetch(mentionMatch[1]).catch(() => null);
 
-      if (!isNaN(input)) return await guild.members.fetch(input).catch(() => null);
+      if (mentionMatch)
+        return guild.members.fetch(mentionMatch[1]).catch(() => null);
 
-      const cached = guild.members.cache.find(
-        m =>
-          m.user.username.toLowerCase() === input.toLowerCase() ||
-          (m.nickname && m.nickname.toLowerCase() === input.toLowerCase())
+      if (!isNaN(input))
+        return guild.members.fetch(input).catch(() => null);
+
+      const cached = guild.members.cache.find(m =>
+        m.user.username.toLowerCase() === input.toLowerCase() ||
+        (m.nickname && m.nickname.toLowerCase() === input.toLowerCase())
       );
+
       if (cached) return cached;
 
-      return await guild.members.fetch().then(list =>
-        list.find(
-          m =>
+      return guild.members.fetch()
+        .then(list =>
+          list.find(m =>
             m.user.username.toLowerCase() === input.toLowerCase() ||
             (m.nickname && m.nickname.toLowerCase() === input.toLowerCase())
+          )
         )
-      ).catch(() => null);
+        .catch(() => null);
+
     }
 
-    async function safeDeferReply() {
-      if (!interaction.replied && !interaction.deferred) {
-        try { await interaction.deferReply({ ephemeral: true }); } catch {}
+    // ===============================
+    // ROLE RESTORE BUTTONS
+    // ===============================
+
+    if (interaction.isButton()) {
+
+      if (interaction.customId.startsWith("restore_roles_")) {
+
+        if (!allowedUsers.includes(interaction.user.id))
+          return safeReply({ content: "❌ Not allowed.", ephemeral: true });
+
+        await safeDefer();
+
+        const guildID = interaction.customId.split("_")[2];
+
+        const success = await restoreRoles(guildID);
+
+        if (!success)
+          return safeEdit({ content: "❌ Backup not found." });
+
+        return safeEdit({
+          content: `✅ Roles restored successfully in **${guild.name}**`
+        });
+
       }
+
+      if (interaction.customId.startsWith("ignore_restore_")) {
+
+        if (!allowedUsers.includes(interaction.user.id))
+          return safeReply({ content: "❌ Not allowed.", ephemeral: true });
+
+        return safeReply({
+          content: "Restore ignored.",
+          ephemeral: true
+        });
+
+      }
+
     }
 
-    // -----------------------------
-    // Ticket category select
-    // -----------------------------
-    if (interaction.isStringSelectMenu() && interaction.customId === 'ticketCategorySelect') {
+    // ===============================
+    // TICKET CATEGORY SELECT
+    // ===============================
+
+    if (
+      interaction.isStringSelectMenu() &&
+      interaction.customId === "ticketCategorySelect"
+    ) {
 
       const category = interaction.values[0];
 
@@ -61,57 +191,61 @@ module.exports = {
         .setCustomId(`mmForm-${category}`)
         .setTitle(`🎫 ${category} Trade Form`);
 
-      const traderInput = new TextInputBuilder()
-        .setCustomId('trader')
-        .setLabel('Trader Name / Username')
+      const trader = new TextInputBuilder()
+        .setCustomId("trader")
+        .setLabel("Trader Name / Username")
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
-      const tradeDetails = new TextInputBuilder()
-        .setCustomId('trade')
-        .setLabel('Trade Details')
+      const trade = new TextInputBuilder()
+        .setCustomId("trade")
+        .setLabel("Trade Details")
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true);
 
-      const extraInfo = new TextInputBuilder()
-        .setCustomId('extra')
-        .setLabel('Extra Info')
+      const extra = new TextInputBuilder()
+        .setCustomId("extra")
+        .setLabel("Extra Info")
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(false);
 
-      const contactMethod = new TextInputBuilder()
-        .setCustomId('contact')
-        .setLabel('Contact Method')
+      const contact = new TextInputBuilder()
+        .setCustomId("contact")
+        .setLabel("Contact Method")
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
       modal.addComponents(
-        new ActionRowBuilder().addComponents(traderInput),
-        new ActionRowBuilder().addComponents(tradeDetails),
-        new ActionRowBuilder().addComponents(extraInfo),
-        new ActionRowBuilder().addComponents(contactMethod)
+        new ActionRowBuilder().addComponents(trader),
+        new ActionRowBuilder().addComponents(trade),
+        new ActionRowBuilder().addComponents(extra),
+        new ActionRowBuilder().addComponents(contact)
       );
 
       return interaction.showModal(modal);
+
     }
 
-    // -----------------------------
-    // Ticket creation
-    // -----------------------------
-    if (interaction.isModalSubmit() && interaction.customId.startsWith('mmForm-')) {
+    // ===============================
+    // MODAL SUBMIT (CREATE TICKET)
+    // ===============================
 
-      await safeDeferReply();
+    if (
+      interaction.isModalSubmit() &&
+      interaction.customId.startsWith("mmForm-")
+    ) {
 
-      const category = interaction.customId.split('-')[1];
+      await safeDefer();
 
-      const traderInput = interaction.fields.getTextInputValue('trader');
-      const tradeDetails = interaction.fields.getTextInputValue('trade');
-      const extraInfo = interaction.fields.getTextInputValue('extra') || 'None';
-      const contactMethod = interaction.fields.getTextInputValue('contact');
+      const category = interaction.customId.split("-")[1];
 
-      const guild = interaction.guild;
+      const traderInput = interaction.fields.getTextInputValue("trader");
+      const tradeDetails = interaction.fields.getTextInputValue("trade");
+      const extraInfo = interaction.fields.getTextInputValue("extra") || "None";
+      const contactMethod = interaction.fields.getTextInputValue("contact");
 
-      const ticketName = `ticket-${interaction.user.username}`.toLowerCase();
+      const ticketName =
+        `ticket-${interaction.user.username}`.toLowerCase();
 
       const otherUser = await resolveMember(guild, traderInput);
 
@@ -123,116 +257,110 @@ module.exports = {
         otherUser ? otherUser.id : null
       );
 
-      const ticketEmbed = new EmbedBuilder()
+      const embed = new EmbedBuilder()
         .setTitle(`🎫 ${category} Ticket`)
         .setDescription(
-          `Welcome <@${interaction.user.id}>! Our **middleman staff** will assist you shortly.\nPinged Staff Role: <@&${claimRoleId}>`
+          `Welcome <@${interaction.user.id}>!\nStaff Role: <@&${claimRoleId}>`
         )
         .addFields(
-          { name: '📌 Trade Info', value: `• Trader Name: ${traderInput}\n• Details: ${tradeDetails}\n• Extra Info: ${extraInfo}\n• Contact Method: ${contactMethod}` },
-          { name: '💠 Selected Trade Type', value: `\`${category}\``, inline: true },
-          { name: '🔥 Status', value: 'Awaiting claim', inline: true },
-          { name: '👤 Ticket Creator', value: `<@${interaction.user.id}>`, inline: true }
+          {
+            name: "📌 Trade Info",
+            value: `Trader: ${traderInput}
+Details: ${tradeDetails}
+Extra: ${extraInfo}
+Contact: ${contactMethod}`
+          },
+          {
+            name: "Status",
+            value: "Awaiting claim",
+            inline: true
+          }
         )
-        .setColor('#1F2937')
-        .setFooter({ text: 'Eldorado MM Ticket System' })
+        .setColor("#1F2937")
         .setTimestamp();
 
       const buttons = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('ticket-add').setLabel('Add').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId('ticket-claim').setLabel('Claim').setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId('ticket-unclaim').setLabel('Unclaim').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('ticket-remove').setLabel('Remove').setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId('ticket-close').setLabel('Close').setStyle(ButtonStyle.Danger)
+
+        new ButtonBuilder()
+          .setCustomId("ticket-claim")
+          .setLabel("Claim")
+          .setStyle(ButtonStyle.Success),
+
+        new ButtonBuilder()
+          .setCustomId("ticket-unclaim")
+          .setLabel("Unclaim")
+          .setStyle(ButtonStyle.Secondary),
+
+        new ButtonBuilder()
+          .setCustomId("ticket-close")
+          .setLabel("Close")
+          .setStyle(ButtonStyle.Danger)
+
       );
 
       await ticketChannel.send({
         content: `<@&${claimRoleId}> <@${interaction.user.id}>`,
-        embeds: [ticketEmbed],
-        components: [buttons],
+        embeds: [embed],
+        components: [buttons]
       });
 
-      return interaction.editReply({
+      return safeEdit({
         content: `✅ Ticket created: <#${ticketChannel.id}>`
       });
+
     }
 
-    // -----------------------------
-    // Ticket Buttons
-    // -----------------------------
+    // ===============================
+    // TICKET BUTTONS
+    // ===============================
+
     if (
       interaction.isButton() &&
-      interaction.channel.name.startsWith('ticket-') &&
-      !interaction.customId.startsWith('acceptOffer_') &&
-      !interaction.customId.startsWith('rejectOffer_')
+      interaction.channel &&
+      interaction.channel.name.startsWith("ticket-")
     ) {
 
-      const ticketChannel = interaction.channel;
-
-      if (!interaction.member.roles.cache.has(claimRoleId)) {
-        return interaction.reply({
-          content: '❌ You are not authorized to use these buttons.',
+      if (!interaction.member.roles.cache.has(claimRoleId))
+        return safeReply({
+          content: "❌ You are not authorized.",
           ephemeral: true
         });
-      }
 
       switch (interaction.customId) {
 
-        case 'ticket-claim': {
+        case "ticket-claim":
 
-          const creator = ticketChannel.permissionOverwrites.cache.find(
-            o => o.type === 'member' && o.allow.has('ViewChannel')
+          return safeReply({
+            embeds: [
+              new EmbedBuilder()
+                .setColor("Green")
+                .setTitle("Ticket Claimed")
+                .setDescription(
+                  `<@${interaction.user.id}> claimed this ticket`
+                )
+            ]
+          });
+
+        case "ticket-unclaim":
+
+          return safeReply({
+            embeds: [
+              new EmbedBuilder()
+                .setColor("Yellow")
+                .setTitle("Ticket Unclaimed")
+            ]
+          });
+
+        case "ticket-close":
+
+          return ticketManager.closeTicket(
+            interaction.channel,
+            guild
           );
 
-          const addedUser = ticketChannel.permissionOverwrites.cache
-            .filter(o => o.type === 'member' && o.allow.has('ViewChannel'))
-            .find(o => o.id !== creator?.id);
-
-          const overwrites = [
-            {
-              id: interaction.guild.roles.everyone,
-              deny: ['ViewChannel']
-            },
-            {
-              id: interaction.user.id,
-              allow: ['ViewChannel','SendMessages','ReadMessageHistory']
-            }
-          ];
-
-          if (creator) overwrites.push({
-            id: creator.id,
-            allow: ['ViewChannel','SendMessages','ReadMessageHistory']
-          });
-
-          if (addedUser && addedUser.id !== interaction.user.id) overwrites.push({
-            id: addedUser.id,
-            allow: ['ViewChannel','SendMessages','ReadMessageHistory']
-          });
-
-          await ticketChannel.permissionOverwrites.set(overwrites);
-
-          const embed = new EmbedBuilder()
-            .setTitle('✅ Ticket Claimed')
-            .setDescription(`<@${interaction.user.id}> has claimed this ticket.`)
-            .setColor('#00FF00');
-
-          return interaction.reply({ embeds: [embed] });
-        }
-
-        case 'ticket-unclaim': {
-          const embed = new EmbedBuilder()
-            .setTitle('⚠️ Ticket Unclaimed')
-            .setDescription(`This ticket is now unclaimed.`)
-            .setColor('#FFFF00');
-
-          return interaction.reply({ embeds: [embed] });
-        }
-
-        case 'ticket-close': {
-          return ticketManager.closeTicket(ticketChannel, interaction.guild);
-        }
-
       }
+
     }
-  },
+
+  }
 };

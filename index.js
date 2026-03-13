@@ -26,6 +26,12 @@ const client = new Client({
 });
 
 // -------------------------
+// Guards
+// -------------------------
+require("./guards/roleBackup")(client);
+require("./guards/antiRoleNuke")(client);
+
+// -------------------------
 // Stick Command
 // -------------------------
 const stickCmd = require('./commands/moderation/stick');
@@ -159,16 +165,10 @@ client.on(Events.MessageCreate, async (message) => {
 
   if (!message.guild || message.author.bot) return;
 
-  // -------------------------
-  // Sticky Listener
-  // -------------------------
   if (stickCmd.stickyListener) {
     stickCmd.stickyListener(message);
   }
 
-  // -------------------------
-  // Maintenance Mode
-  // -------------------------
   if (client.isMaintenance && message.author.id !== process.env.OWNER_ID) {
     return message.channel.send({
       embeds: [{
