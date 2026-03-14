@@ -24,7 +24,7 @@ module.exports = {
         // ----------------------
         // IMAGE LINK (editable)
         // ----------------------
-        const imageLink = 'https://media.discordapp.net/attachments/1480184670606983240/1481755017307357395/fuck10.gif?ex=69b47765&is=69b325e5&hm=a7383b9f7eeeba43c8d74ffa1782a6a3994b6cab34bb584ba62f5851b8ccc7bf&=';
+        const imageLink = 'https://cdn.discordapp.com/attachments/1482399653021356093/1482402868429586452/fuck2.gif?ex=69b6d2c1&is=69b58141&hm=c0b2cdaec84122c32b62a7e6a6619ade6438e545c9137f8e758dd5ad4ae12cee&';
         // <-- Edit this line to change the image URL
 
         // ----------------------
