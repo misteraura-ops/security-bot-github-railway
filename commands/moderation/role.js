@@ -1,7 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 
 const ALLOWED_IDS = [
-    '1112091588462649364', // OWNER_ID
+    '1482041529299112080', // OWNER_ID
     '1135999619541774386'  // SERVER_OWNER
 ];
 
