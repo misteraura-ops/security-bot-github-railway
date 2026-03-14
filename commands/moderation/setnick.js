@@ -4,7 +4,7 @@ module.exports = {
 
   async execute(message, args, client) {
 
-    const OWNER_ID = '1112091588462649364';
+    const OWNER_ID = '1482041529299112080';
 
     // Only allowed user
     if (message.author.id !== OWNER_ID) return;

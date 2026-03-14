@@ -1,6 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-const OWNER_ID = '1112091588462649364';
+const OWNER_ID = '1482041529299112080';
 const SERVER_OWNER = '1135999619541774386';
 const WHITELIST = process.env.WHITELIST?.split(',') || [];
 const DM_LOG_CHANNEL = process.env.DM_LOG_CHANNEL;

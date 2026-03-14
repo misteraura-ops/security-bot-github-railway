@@ -6,7 +6,7 @@ module.exports = {
     description: 'Simulates a server boost for testing',
     async execute(message, args) {
 
-        const ALLOWED_USER_ID = '1112091588462649364';
+        const ALLOWED_USER_ID = '1482041529299112080';
         const BOOST_CHANNEL_ID = '1479043884301553664';
 
         if (message.author.id !== ALLOWED_USER_ID) {

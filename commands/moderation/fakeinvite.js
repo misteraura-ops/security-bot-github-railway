@@ -5,7 +5,7 @@ module.exports = {
     name: 'fakeinvite',
     description: 'Simulates an invite with two random users for testing the panel',
     async execute(message, args) {
-        const ALLOWED_USER_ID = '1112091588462649364';
+        const ALLOWED_USER_ID = '1482041529299112080';
         const INVITE_CHANNEL_ID = '1479054141312471092';
 
         if (message.author.id !== ALLOWED_USER_ID) return;

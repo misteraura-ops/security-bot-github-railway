@@ -8,7 +8,7 @@ const fs = require('fs').promises;
 const path = require('path');
 
 // Config from .env
-const OWNER_ID = '1112091588462649364';
+const OWNER_ID = '1482041529299112080';
 const SERVER_OWNER = '1135999619541774386';
 const TIMEOUT_PERM = process.env.TIMEOUT_PERM;
 

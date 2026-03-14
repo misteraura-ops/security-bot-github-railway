@@ -17,7 +17,7 @@ const afkUsers = new Map();
 
 // === Owner/Admin IDs for help ===
 const OWNER_IDS = [
-    '1112091588462649364', // OWNER_ID
+    '1482041529299112080', // OWNER_ID
     '1165152007418560612'  // SERVER_OWNER
 ];
 

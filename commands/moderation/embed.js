@@ -7,7 +7,7 @@ module.exports = {
   description: 'Create a custom multi-line embed with title and text',
   async execute(message, args) {
     // Only allow the specific user
-    if (message.author.id !== '1112091588462649364') return;
+    if (message.author.id !== '1482041529299112080') return;
 
     if (!args.length) {
       return message.reply('❌ You must provide a title and text, separated by a comma.');
