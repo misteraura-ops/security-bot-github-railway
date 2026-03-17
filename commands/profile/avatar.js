@@ -2,40 +2,31 @@ const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
   name: 'av',
-  description: 'Display a user\'s avatar with a professional panel.',
-  usage: '.av [@user|ID]',
+  description: 'Displays a professional avatar panel.',
+  usage: '.av [@user|userID]',
   async execute(message, args, client) {
     try {
-      // Fetch user
       let user;
       if (args[0]) {
-        const fetchedMember = await message.guild.members.fetch(args[0]).catch(() => null);
-        if (fetchedMember) user = fetchedMember.user;
+        const member = await message.guild.members.fetch(args[0]).catch(() => null);
+        if (member) user = member.user;
       }
       if (!user) user = message.mentions.users.first() || message.author;
 
-      // Build embed
-      const avatarEmbed = new EmbedBuilder()
-        .setTitle(`${user.username}'s Avatar`)
-        .setURL(user.displayAvatarURL({ dynamic: true, size: 1024 }))
+      const isBot = user.bot ? '🤖 Bot' : '👤 Human';
+      const embed = new EmbedBuilder()
+        .setColor('Random')
+        .setTitle(`${user.tag} Avatar ${isBot}`)
+        .setDescription(isBot === '🤖 Bot' ? 'This is a bot account. Certain user info may not apply.' : '')
         .setImage(user.displayAvatarURL({ dynamic: true, size: 1024 }))
-        .setColor(user.accentColor || 'Random')
+        .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 128 }))
         .setFooter({ text: `Requested by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
         .setTimestamp();
 
-      // Extra info for bots
-      if (user.bot) {
-        avatarEmbed.addFields(
-          { name: '🤖 Bot', value: 'Yes', inline: true },
-          { name: 'Bot ID', value: user.id, inline: true },
-          { name: 'Avatar URL', value: `[Click Here](${user.displayAvatarURL({ dynamic: true })})`, inline: false }
-        );
-      }
-
-      await message.channel.send({ embeds: [avatarEmbed] });
+      message.channel.send({ embeds: [embed] });
     } catch (err) {
       console.error('Avatar Command Error:', err);
-      message.channel.send('❌ Could not fetch avatar. Ensure the ID/mention is valid.');
+      message.channel.send('❌ Unable to fetch avatar. Make sure the ID or mention is valid.');
     }
   },
 };
