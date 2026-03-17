@@ -27,7 +27,6 @@ module.exports = {
     // ===============================
     // SAFE HELPERS
     // ===============================
-
     async function safeReply(msg) {
       try {
         if (interaction.replied) return;
@@ -36,10 +35,10 @@ module.exports = {
       } catch {}
     }
 
-    async function safeDefer() {
+    async function safeDefer(ephemeral = true) {
       try {
         if (!interaction.replied && !interaction.deferred) {
-          await interaction.deferReply({ ephemeral: true });
+          await interaction.deferReply({ ephemeral });
         }
       } catch {}
     }
@@ -51,40 +50,57 @@ module.exports = {
     }
 
     // ===============================
-    // BUTTON HANDLER (All buttons in one block)
+    // SLASH COMMANDS
     // ===============================
+    if (interaction.isChatInputCommand()) {
+      const command = client.slashCommands.get(interaction.commandName);
+      if (!command) return;
 
+      try {
+        await safeDefer(false); // defer to avoid timeout
+        await command.execute(interaction, client);
+      } catch (err) {
+        console.error(`Error executing slash command ${interaction.commandName}:`, err);
+        if (!interaction.replied)
+          await interaction.reply({ content: "❌ Something went wrong.", ephemeral: true });
+      }
+      return;
+    }
+
+    // ===============================
+    // BUTTON HANDLER
+    // ===============================
     if (interaction.isButton()) {
       const id = interaction.customId;
       const userData = await eco.getUser(interaction.user.id);
+      const now = Date.now();
 
       // ---------- ECONOMY ----------
       if (id.startsWith("eco_")) {
-        const now = Date.now();
+        await safeDefer(false);
 
+        // WORK
         if (id === "eco_work") {
           const cooldown = 5 * 60 * 1000;
           if (now - userData.lastWork < cooldown) {
-            return interaction.reply({ content: "⏳ You are tired. Try again later.", ephemeral: true });
+            return safeEdit({ content: "⏳ You are tired. Try again later.", components: [] });
           }
 
-          await interaction.update({ content: "💼 Working...", embeds: [], components: [] });
+          const amount = Math.floor(Math.random() * 400) + 100;
+          await eco.addMoney(interaction.user.id, amount);
+          await eco.setCooldown(interaction.user.id, "lastWork");
+          const updated = await eco.getUser(interaction.user.id);
 
-          setTimeout(async () => {
-            const amount = Math.floor(Math.random() * 400) + 100;
-            await eco.addMoney(interaction.user.id, amount);
-            await eco.setCooldown(interaction.user.id, "lastWork");
-            const updated = await eco.getUser(interaction.user.id);
-
-            const embed = ui.mainPanel(interaction.user, updated).setDescription(`💼 **Work Complete**\nYou earned **$${amount}** 💰\nKeep grinding 👇`);
-            await interaction.editReply({ content: "", embeds: [embed], components: ui.mainButtons() });
-          }, 1200);
+          const embed = ui.mainPanel(interaction.user, updated)
+            .setDescription(`💼 **Work Complete**\nYou earned **$${amount}** 💰\nKeep grinding 👇`);
+          return safeEdit({ content: "", embeds: [embed], components: ui.mainButtons() });
         }
 
+        // DAILY
         if (id === "eco_daily") {
           const cooldown = 24 * 60 * 60 * 1000;
           if (now - userData.lastDaily < cooldown) {
-            return interaction.reply({ content: "⏳ Already claimed daily.", ephemeral: true });
+            return safeEdit({ content: "⏳ Already claimed daily.", components: [] });
           }
 
           const amount = 1000;
@@ -92,8 +108,9 @@ module.exports = {
           await eco.setCooldown(interaction.user.id, "lastDaily");
           const updated = await eco.getUser(interaction.user.id);
 
-          const embed = ui.mainPanel(interaction.user, updated).setDescription(`🎁 **Daily Reward**\nYou claimed **$${amount}** 💰`);
-          return interaction.update({ embeds: [embed], components: ui.mainButtons() });
+          const embed = ui.mainPanel(interaction.user, updated)
+            .setDescription(`🎁 **Daily Reward**\nYou claimed **$${amount}** 💰`);
+          return safeEdit({ content: "", embeds: [embed], components: ui.mainButtons() });
         }
       }
 
