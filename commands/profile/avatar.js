@@ -1,42 +1,31 @@
-const { MessageEmbed } = require('discord.js');
+const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
   name: 'av',
-  description: 'Show a user’s avatar.',
+  description: 'Displays a user\'s avatar.',
+  usage: '.av [@user|userID]',
   async execute(message, args, client) {
     try {
+      // Get the user from mention or ID, default to message author
       let user;
-
-      // Try mention
-      if (message.mentions.users.size) {
-        user = message.mentions.users.first();
-      } 
-      // Try ID
-      else if (args[0]) {
-        user = await client.users.fetch(args[0]).catch(() => null);
-      } 
-      // Default to message author
-      else {
-        user = message.author;
+      if (args[0]) {
+        user = await message.guild.members.fetch(args[0]).catch(() => null);
+        if (user) user = user.user;
       }
+      if (!user) user = message.mentions.users.first() || message.author;
 
-      if (!user) {
-        return message.reply('❌ Could not find that user.');
-      }
-
-      const avatarURL = user.displayAvatarURL({ dynamic: true, size: 1024 });
-
-      const embed = new MessageEmbed()
-        .setTitle(`${user.username}'s Avatar`)
-        .setImage(avatarURL)
-        .setColor('RANDOM')
+      // Create embed
+      const avatarEmbed = new EmbedBuilder()
+        .setTitle(`${user.tag}'s Avatar`)
+        .setImage(user.displayAvatarURL({ dynamic: true, size: 1024 }))
+        .setColor('Random')
         .setFooter({ text: `Requested by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
         .setTimestamp();
 
-      message.channel.send({ embeds: [embed] });
+      await message.channel.send({ embeds: [avatarEmbed] });
     } catch (err) {
       console.error('Avatar Command Error:', err);
-      message.reply('⚠️ Something went wrong fetching the avatar.');
+      message.channel.send('❌ Unable to fetch avatar. Make sure the ID or mention is valid.');
     }
   },
 };

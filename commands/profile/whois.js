@@ -1,53 +1,39 @@
-const { MessageEmbed } = require('discord.js');
-
-// Simple cooldown tracker (can be replaced with DB later)
-const cooldowns = new Map();
+const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
-  name: 'work',
-  description: 'Work to earn money.',
-  cooldown: 60 * 5, // 5 minutes in seconds
-  minReward: 50,
-  maxReward: 300,
-  async execute(message, args, client, economy) {
+  name: 'whois',
+  description: 'Displays detailed information about a user.',
+  usage: '.whois [@user|userID]',
+  async execute(message, args, client) {
     try {
-      const userId = message.author.id;
-      const now = Date.now();
-
-      // Check cooldown
-      if (cooldowns.has(userId)) {
-        const expiration = cooldowns.get(userId) + this.cooldown * 1000;
-        if (now < expiration) {
-          const remaining = Math.ceil((expiration - now) / 1000);
-          return message.reply(`⏳ You need to wait ${remaining}s before working again.`);
-        }
+      // Get user
+      let member;
+      if (args[0]) {
+        member = await message.guild.members.fetch(args[0]).catch(() => null);
       }
+      if (!member) member = message.mentions.members.first() || message.member;
 
-      // Fetch user balance from your economy system
-      const balance = await economy.getUserBalance(userId);
-      if (balance === null) return message.reply('❌ You don’t have an economy account yet.');
+      const user = member.user;
 
-      // Generate random reward
-      const reward = Math.floor(Math.random() * (this.maxReward - this.minReward + 1)) + this.minReward;
-
-      // Update balance
-      await economy.addUserBalance(userId, reward);
-
-      // Set cooldown
-      cooldowns.set(userId, now);
-
-      const embed = new MessageEmbed()
-        .setTitle('💼 Work Complete!')
-        .setDescription(`You worked hard and earned **$${reward}**!`)
-        .addField('Current Balance', `$${balance + reward}`, true)
-        .setColor('GREEN')
+      const embed = new EmbedBuilder()
+        .setTitle(`User Info: ${user.tag}`)
+        .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 512 }))
+        .setColor('Random')
+        .addFields(
+          { name: '🆔 ID', value: `${user.id}`, inline: true },
+          { name: '👤 Username', value: `${user.username}`, inline: true },
+          { name: '📛 Nickname', value: `${member.nickname || 'None'}`, inline: true },
+          { name: '🟢 Status', value: `${member.presence?.status || 'Offline'}`, inline: true },
+          { name: '🎉 Joined Server', value: `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>`, inline: true },
+          { name: '📅 Account Created', value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`, inline: true }
+        )
         .setFooter({ text: `Requested by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
         .setTimestamp();
 
-      message.channel.send({ embeds: [embed] });
+      await message.channel.send({ embeds: [embed] });
     } catch (err) {
-      console.error('Work Command Error:', err);
-      message.reply('⚠️ Something went wrong while working.');
+      console.error('WhoIs Command Error:', err);
+      message.channel.send('❌ Could not fetch user info. Make sure the user exists in this server.');
     }
   },
 };
