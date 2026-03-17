@@ -34,6 +34,7 @@ const stickCmd = require('./commands/moderation/stick');
 // Collections & Prefixes
 // -------------------------
 client.commands = new Collection();
+client.slashCommands = new Collection(); // new collection for slash commands
 client.prefixes = process.env.PREFIXES
   ? process.env.PREFIXES.split(',').map(p => p.trim())
   : ['.'];
@@ -46,9 +47,7 @@ client.isMaintenance = false;
 client.modLogChannels = new Map();
 
 client.getModLogChannel = async function (guild) {
-  if (client.modLogChannels.has(guild.id)) {
-    return client.modLogChannels.get(guild.id);
-  }
+  if (client.modLogChannels.has(guild.id)) return client.modLogChannels.get(guild.id);
 
   let channel = guild.channels.cache.find(
     c => c.name === 'mod-logs' && c.type === ChannelType.GuildText
@@ -73,7 +72,7 @@ client.logMod = async function (guild, embed) {
 };
 
 // -------------------------
-// Load Commands Recursively
+// Load Commands Recursively (prefix + slash support)
 // -------------------------
 function loadCommands(dir) {
   if (!fs.existsSync(dir)) return;
@@ -86,8 +85,15 @@ function loadCommands(dir) {
       loadCommands(fullPath);
     } else if (file.endsWith('.js')) {
       const command = require(fullPath);
+
+      // Prefix command
       if (command?.name && typeof command.execute === 'function') {
         client.commands.set(command.name, command);
+      }
+
+      // Slash command
+      if (command?.data && typeof command.execute === 'function') {
+        client.slashCommands.set(command.data.name, command);
       }
     }
   }
@@ -95,48 +101,30 @@ function loadCommands(dir) {
 
 loadCommands(path.join(__dirname, 'commands'));
 console.log(`✅ Loaded commands: ${[...client.commands.keys()].join(', ')}`);
+console.log(`✅ Loaded slash commands: ${[...client.slashCommands.keys()].join(', ')}`);
 
 // -------------------------
-// Register Ticket Slash Commands
-// -------------------------
-const ticketCmdsDir = path.join(__dirname, 'commands', 'ticketcmds');
+// Register Slash Commands (Guild)
+if (process.env.CLIENT_ID && process.env.GUILD_ID) {
+  const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+  const commandsArray = [...client.slashCommands.values()].map(cmd => cmd.data.toJSON());
 
-if (fs.existsSync(ticketCmdsDir)) {
-  const commandsArray = [];
-
-  for (const file of fs.readdirSync(ticketCmdsDir).filter(f => f.endsWith('.js'))) {
-    const command = require(path.join(ticketCmdsDir, file));
-    client.commands.set(command.data?.name || command.name, command);
-
-    if (command.data) {
-      commandsArray.push(command.data.toJSON());
+  (async () => {
+    try {
+      console.log('🔹 Registering slash commands...');
+      await rest.put(
+        Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+        { body: commandsArray }
+      );
+      console.log('✅ Slash commands registered.');
+    } catch (err) {
+      console.error(err);
     }
-  }
-
-  if (process.env.CLIENT_ID && process.env.GUILD_ID && commandsArray.length) {
-    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
-
-    (async () => {
-      try {
-        console.log('🔹 Registering ticket commands...');
-        await rest.put(
-          Routes.applicationGuildCommands(
-            process.env.CLIENT_ID,
-            process.env.GUILD_ID
-          ),
-          { body: commandsArray }
-        );
-        console.log('✅ Ticket commands registered.');
-      } catch (err) {
-        console.error(err);
-      }
-    })();
-  }
+  })();
 }
 
 // -------------------------
 // Load Events (except messageCreate)
-// -------------------------
 const eventPath = path.join(__dirname, 'events');
 
 if (fs.existsSync(eventPath)) {
@@ -154,9 +142,7 @@ if (fs.existsSync(eventPath)) {
 
 // -------------------------
 // Handle Prefix Commands
-// -------------------------
 client.on(Events.MessageCreate, async (message) => {
-
   if (!message.guild || message.author.bot) return;
 
   // Sticky system
@@ -191,14 +177,30 @@ client.on(Events.MessageCreate, async (message) => {
 });
 
 // -------------------------
-// Ready Event
+// Handle Slash Commands
+client.on(Events.InteractionCreate, async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
+
+  const command = client.slashCommands.get(interaction.commandName);
+  if (!command) return;
+
+  try {
+    await command.execute(interaction, client);
+  } catch (err) {
+    console.error(`Error executing slash command ${interaction.commandName}:`, err);
+    if (!interaction.replied) {
+      await interaction.reply({ content: '❌ There was an error executing this command.', ephemeral: true });
+    }
+  }
+});
+
 // -------------------------
+// Ready Event
 client.once(Events.ClientReady, () => {
   console.log(`🚀 Logged in as ${client.user.tag}`);
 });
 
 // -------------------------
 // Login
-// -------------------------
 client.login(process.env.TOKEN)
   .catch(err => console.error('Failed to login:', err));
