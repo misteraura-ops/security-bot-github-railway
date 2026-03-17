@@ -1,4 +1,4 @@
-const { Events, EmbedBuilder } = require('discord.js');
+const { Events } = require('discord.js');
 
 module.exports = {
   name: Events.MessageCreate,
@@ -22,7 +22,7 @@ module.exports = {
     try {
       return await command.execute(message, args);
     } catch (err) {
-      console.error('CMD ERROR:', err);
+      console.error(err);
       return message.reply('⚠️ Error executing that command.');
     }
   }
