@@ -2,8 +2,8 @@ const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
   name: 'whois',
-  aliases: ['profile', 'userinfo', 'ui'],
-  description: 'Displays a professional Dyno-style profile panel.',
+  aliases: ['profile', 'userinfo', 'ui', 'who'],
+  description: 'Displays a professional pink aesthetic Dyno-style profile panel.',
   usage: '.whois [@user|userID]',
   async execute(message, args) {
     try {
@@ -26,22 +26,25 @@ module.exports = {
       const presenceStatus = member.presence?.status || 'offline';
       const statusEmoji = statusMap[presenceStatus];
 
-      // Embed color: use highest role color or default
-      const embedColor = member.roles.highest?.color || 0x5865F2;
+      // Embed color pink
+      const embedColor = '#FF69B4';
 
-      // Roles (exclude @everyone)
+      // Roles
       const roles = member.roles.cache.filter(r => r.id !== message.guild.id).map(r => r.toString()).join(', ') || 'None';
 
       // Badges / flags
       const flags = (await user.fetchFlags())?.toArray() || [];
-      const badges = flags.length ? flags.join(', ') : 'None';
+      const badges = flags.length ? flags.join(' | ') : 'None';
 
-      // Nitro icon if boosted (placeholder if premium)
-      const nitro = user.premiumSince ? '💎 Nitro Boosted' : '';
+      // Nitro
+      const nitro = user.premiumSince ? '💎 Nitro Boosted' : 'None';
+
+      // Decorative header
+      const header = `𖥻  ׁ ׅ ${user.username} ! ׁ ׅ 🪷⋆ ❥`;
 
       const embed = new EmbedBuilder()
         .setColor(embedColor)
-        .setAuthor({ name: `${user.tag} ${isBot ? '🤖' : ''}`, iconURL: user.displayAvatarURL({ dynamic: true }) })
+        .setAuthor({ name: header, iconURL: user.displayAvatarURL({ dynamic: true }) })
         .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 512 }))
         .addFields(
           { name: '🆔 User ID', value: user.id, inline: true },
@@ -51,7 +54,7 @@ module.exports = {
           { name: '🎉 Joined Server', value: `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>`, inline: true },
           { name: '📅 Account Created', value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`, inline: true },
           { name: '💠 Badges', value: badges, inline: true },
-          { name: '💎 Nitro', value: nitro || 'None', inline: true },
+          { name: '💎 Nitro', value: nitro, inline: true },
           { name: '👥 Roles', value: roles, inline: false },
           ...(isBot ? [{ name: '🤖 Bot Info', value: 'This user is a bot account.' }] : [])
         )

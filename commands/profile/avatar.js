@@ -2,12 +2,11 @@ const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
   name: 'avatar',
-  aliases: ['av', 'pfp', 'icon'],
-  description: 'Displays a user avatar with professional panel.',
+  aliases: ['av', 'pfp', 'icon', 'profilepic'],
+  description: 'Displays a user avatar with cute pink aesthetic panel.',
   usage: '.av [@user|userID]',
   async execute(message, args) {
     try {
-      // Fetch user by mention or ID
       let user;
       if (args[0]) {
         user = await message.guild.members.fetch(args[0]).catch(() => null);
@@ -17,7 +16,7 @@ module.exports = {
 
       const member = message.guild.members.cache.get(user.id);
 
-      // Determine if server avatar differs from global avatar
+      // Main vs server avatar
       const mainAvatar = user.displayAvatarURL({ dynamic: true, size: 1024 });
       const serverAvatar = member?.avatar
         ? member.avatarURL({ dynamic: true, size: 1024 })
@@ -27,11 +26,14 @@ module.exports = {
 
       // Badges
       const flags = (await user.fetchFlags())?.toArray() || [];
-      const badges = flags.length ? flags.join(', ') : 'None';
+      const badges = flags.length ? flags.join(' | ') : 'None';
+
+      // Decorative header
+      const header = `𖥻  ׁ ׅ ${user.username} ! ׁ ׅ 🪷⋆ ❥`;
 
       const embed = new EmbedBuilder()
-        .setColor('#5865F2') // Discord blurple as clean professional color
-        .setAuthor({ name: `${user.tag} ${user.bot ? '🤖' : ''}`, iconURL: user.displayAvatarURL({ dynamic: true }) })
+        .setColor('#FF69B4') // Pink pastel
+        .setAuthor({ name: header, iconURL: user.displayAvatarURL({ dynamic: true }) })
         .setThumbnail(mainAvatar)
         .setImage(serverAvatar || mainAvatar)
         .addFields(
