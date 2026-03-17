@@ -47,7 +47,7 @@ module.exports = {
         .setAuthor({ name: header, iconURL: user.displayAvatarURL({ dynamic: true }) })
         .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 512 }))
         .addFields(
-          { name: '🆔 User ID', value: user.id, inline: true },
+          { name: '<:name:1472947640013426883> User ID', value: user.id, inline: true },
           { name: '👤 Username', value: user.username, inline: true },
           { name: '📛 Nickname', value: member.nickname || 'None', inline: true },
           { name: '🟢 Status', value: statusEmoji, inline: true },

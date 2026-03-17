@@ -37,7 +37,7 @@ module.exports = {
         .setThumbnail(mainAvatar)
         .setImage(serverAvatar || mainAvatar)
         .addFields(
-          { name: '🆔 User ID', value: user.id, inline: true },
+          { name: '<:name:1472947640013426883> User ID', value: user.id, inline: true },
           { name: '📌 Avatar Type', value: avatarType, inline: true },
           { name: '💠 Badges', value: badges, inline: true }
         )
