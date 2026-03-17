@@ -20,8 +20,8 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,     // ✅ Required for member info
-    GatewayIntentBits.GuildPresences    // ✅ Required for status
+    GatewayIntentBits.GuildMembers,     // ✅ Needed for member fetch
+    GatewayIntentBits.GuildPresences    // ✅ Needed for status
   ],
   partials: [Partials.Channel, Partials.GuildMember]
 });
@@ -68,7 +68,7 @@ function loadSlashCommands(dir) {
   for (const file of fs.readdirSync(dir)) {
     const fullPath = path.join(dir, file);
     const stat = fs.statSync(fullPath);
-    if (stat.isDirectory()) {
+    if (stat.isDirectory) {
       const { loaded: nested, array: nestedArray } = loadSlashCommands(fullPath);
       loaded.push(...nested);
       arrayForREST.push(...nestedArray);
@@ -115,8 +115,8 @@ if (fs.existsSync(eventPath)) {
   for (const file of fs.readdirSync(eventPath).filter(f => f.endsWith('.js'))) {
     const event = require(path.join(eventPath, file));
     if (!event?.name || typeof event.execute !== 'function') continue;
-    if (event.once) client.once(event.name, (...args) => event.execute(...args));
-    else client.on(event.name, (...args) => event.execute(...args));
+    if (event.once) client.once(event.name, (...args) => event.execute(...args, client));
+    else client.on(event.name, (...args) => event.execute(...args, client));
   }
 }
 
@@ -131,4 +131,4 @@ client.once(Events.ClientReady, async () => {
 // -------------------------
 // Login
 // -------------------------
-client.login(process.env.TOKEN).catch(err => console.error('Failed to login:', err));
+client.login(process.env.TOKEN).catch(err => console.error('Failed to login:', err));l

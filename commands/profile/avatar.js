@@ -1,7 +1,7 @@
 module.exports = {
   name: 'avatar',
   aliases: ['av', 'pfp'],
-  async execute(message, args) {
+  async execute(message) {
     try {
       const user = message.mentions.users.first() || message.author;
       await message.channel.send({
@@ -12,8 +12,7 @@ module.exports = {
           footer: { text: `Requested by ${message.author.tag}`, icon_url: message.author.displayAvatarURL({ dynamic: true }) }
         }]
       });
-    } catch (err) {
-      console.error(err);
+    } catch {
       message.channel.send('⚠️ Could not fetch avatar. Make sure the user exists!');
     }
   }

@@ -1,7 +1,7 @@
 module.exports = {
   name: 'whois',
   aliases: ['w'],
-  async execute(message, args) {
+  async execute(message) {
     try {
       const member = message.mentions.members.first() || await message.guild.members.fetch(message.author.id);
       const user = member.user;
@@ -21,8 +21,8 @@ module.exports = {
           footer: { text: `Requested by ${message.author.tag}`, icon_url: message.author.displayAvatarURL({ dynamic: true }) }
         }]
       });
-    } catch (err) {
-      console.error(err);
+
+    } catch {
       message.channel.send('⚠️ Could not fetch user info. Make sure the user exists!');
     }
   }
