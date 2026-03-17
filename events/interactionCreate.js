@@ -10,15 +10,17 @@ const {
   EmbedBuilder
 } = require("discord.js");
 
+const eco = require("./systems/economySystem");
+const ui = require("./systems/uiBuilder");
 const ticketManager = require("../utils/ticketManager");
 
 module.exports = {
   name: Events.InteractionCreate,
 
   async execute(interaction, client) {
-
     if (!interaction.guild) return;
 
+    const guild = interaction.guild;
     const claimRoleId = "1465699111931215903";
 
     const allowedUsers = [
@@ -26,7 +28,9 @@ module.exports = {
       process.env.SERVER_OWNER
     ];
 
-    const guild = interaction.guild;
+    // ===============================
+    // SAFE HELPERS
+    // ===============================
 
     async function safeReply(msg) {
       try {
@@ -50,10 +54,92 @@ module.exports = {
       } catch {}
     }
 
+    // ===============================
+    // ECONOMY BUTTONS
+    // ===============================
+
+    if (interaction.isButton()) {
+      const id = interaction.customId;
+      const userData = await eco.getUser(interaction.user.id);
+
+      // 💼 WORK
+      if (id === "eco_work") {
+        const now = Date.now();
+        const cooldown = 5 * 60 * 1000;
+
+        if (now - userData.lastWork < cooldown) {
+          return interaction.reply({
+            content: "⏳ You are tired. Try again later.",
+            ephemeral: true
+          });
+        }
+
+        await interaction.update({
+          content: "💼 Working...",
+          embeds: [],
+          components: []
+        });
+
+        setTimeout(async () => {
+          const amount = Math.floor(Math.random() * 400) + 100;
+
+          await eco.addMoney(interaction.user.id, amount);
+          await eco.setCooldown(interaction.user.id, "lastWork");
+
+          const updated = await eco.getUser(interaction.user.id);
+
+          const embed = ui.mainPanel(interaction.user, updated)
+            .setDescription(`💼 **Work Complete**
+
+You earned **$${amount}** 💰
+
+Keep grinding 👇`);
+
+          await interaction.editReply({
+            content: "",
+            embeds: [embed],
+            components: ui.mainButtons()
+          });
+        }, 1200);
+      }
+
+      // 🎁 DAILY
+      if (id === "eco_daily") {
+        const now = Date.now();
+        const cooldown = 24 * 60 * 60 * 1000;
+
+        if (now - userData.lastDaily < cooldown) {
+          return interaction.reply({
+            content: "⏳ Already claimed daily.",
+            ephemeral: true
+          });
+        }
+
+        const amount = 1000;
+
+        await eco.addMoney(interaction.user.id, amount);
+        await eco.setCooldown(interaction.user.id, "lastDaily");
+
+        const updated = await eco.getUser(interaction.user.id);
+
+        const embed = ui.mainPanel(interaction.user, updated)
+          .setDescription(`🎁 **Daily Reward**
+
+You claimed **$${amount}** 💰`);
+
+        return interaction.update({
+          embeds: [embed],
+          components: ui.mainButtons()
+        });
+      }
+    }
+
+    // ===============================
+    // ROLE BACKUP / RESTORE
+    // ===============================
+
     function getBackup(guildID) {
-
       const file = `./backups/${guildID}_roles.json`;
-
       if (!fs.existsSync(file)) return null;
 
       try {
@@ -61,11 +147,9 @@ module.exports = {
       } catch {
         return null;
       }
-
     }
 
     async function restoreRoles(guildID) {
-
       const backup = getBackup(guildID);
       if (!backup) return false;
 
@@ -75,9 +159,7 @@ module.exports = {
       const createdRoles = {};
 
       for (const role of backup.roles) {
-
         try {
-
           const newRole = await targetGuild.roles.create({
             name: role.name,
             color: role.color,
@@ -87,35 +169,59 @@ module.exports = {
           });
 
           createdRoles[role.name] = newRole;
-
         } catch {}
-
       }
 
       for (const memberID in backup.members) {
-
         const member = await targetGuild.members.fetch(memberID).catch(() => null);
         if (!member) continue;
 
         for (const roleName of backup.members[memberID]) {
-
           const role = createdRoles[roleName];
           if (role) await member.roles.add(role).catch(() => {});
-
         }
-
       }
 
       return true;
-
     }
 
-    async function resolveMember(guild, input) {
+    if (interaction.isButton()) {
+      if (interaction.customId.startsWith("restore_roles_")) {
+        if (!allowedUsers.includes(interaction.user.id))
+          return safeReply({ content: "❌ Not allowed.", ephemeral: true });
 
+        await safeDefer();
+
+        const guildID = interaction.customId.split("_")[2];
+        const success = await restoreRoles(guildID);
+
+        if (!success)
+          return safeEdit({ content: "❌ Backup not found." });
+
+        return safeEdit({
+          content: `✅ Roles restored in **${guild.name}**`
+        });
+      }
+
+      if (interaction.customId.startsWith("ignore_restore_")) {
+        if (!allowedUsers.includes(interaction.user.id))
+          return safeReply({ content: "❌ Not allowed.", ephemeral: true });
+
+        return safeReply({
+          content: "Restore ignored.",
+          ephemeral: true
+        });
+      }
+    }
+
+    // ===============================
+    // MEMBER RESOLVER
+    // ===============================
+
+    async function resolveMember(guild, input) {
       if (!input) return null;
 
       const mentionMatch = input.match(/<@!?(\d+)>/);
-
       if (mentionMatch)
         return guild.members.fetch(mentionMatch[1]).catch(() => null);
 
@@ -137,111 +243,52 @@ module.exports = {
           )
         )
         .catch(() => null);
-
     }
 
     // ===============================
-    // ROLE RESTORE BUTTONS
-    // ===============================
-
-    if (interaction.isButton()) {
-
-      if (interaction.customId.startsWith("restore_roles_")) {
-
-        if (!allowedUsers.includes(interaction.user.id))
-          return safeReply({ content: "❌ Not allowed.", ephemeral: true });
-
-        await safeDefer();
-
-        const guildID = interaction.customId.split("_")[2];
-
-        const success = await restoreRoles(guildID);
-
-        if (!success)
-          return safeEdit({ content: "❌ Backup not found." });
-
-        return safeEdit({
-          content: `✅ Roles restored successfully in **${guild.name}**`
-        });
-
-      }
-
-      if (interaction.customId.startsWith("ignore_restore_")) {
-
-        if (!allowedUsers.includes(interaction.user.id))
-          return safeReply({
-            content: "❌ Not allowed.",
-            ephemeral: true
-          });
-
-        return safeReply({
-          content: "Restore ignored.",
-          ephemeral: true
-        });
-
-      }
-
-    }
-
-    // ===============================
-    // TICKET CATEGORY SELECT
+    // TICKET SELECT MENU
     // ===============================
 
     if (
       interaction.isStringSelectMenu() &&
       interaction.customId === "ticketCategorySelect"
     ) {
-
       const category = interaction.values[0];
 
       const modal = new ModalBuilder()
         .setCustomId(`mmForm-${category}`)
         .setTitle(`🎫 ${category} Trade Form`);
 
-      const trader = new TextInputBuilder()
-        .setCustomId("trader")
-        .setLabel("Trader Name / Username")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
-
-      const trade = new TextInputBuilder()
-        .setCustomId("trade")
-        .setLabel("Trade Details")
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true);
-
-      const extra = new TextInputBuilder()
-        .setCustomId("extra")
-        .setLabel("Extra Info")
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(false);
-
-      const contact = new TextInputBuilder()
-        .setCustomId("contact")
-        .setLabel("Contact Method")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
+      const inputs = [
+        ["trader", "Trader Name / Username", TextInputStyle.Short, true],
+        ["trade", "Trade Details", TextInputStyle.Paragraph, true],
+        ["extra", "Extra Info", TextInputStyle.Paragraph, false],
+        ["contact", "Contact Method", TextInputStyle.Short, true]
+      ];
 
       modal.addComponents(
-        new ActionRowBuilder().addComponents(trader),
-        new ActionRowBuilder().addComponents(trade),
-        new ActionRowBuilder().addComponents(extra),
-        new ActionRowBuilder().addComponents(contact)
+        ...inputs.map(([id, label, style, required]) =>
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId(id)
+              .setLabel(label)
+              .setStyle(style)
+              .setRequired(required)
+          )
+        )
       );
 
       return interaction.showModal(modal);
-
     }
 
     // ===============================
-    // MODAL SUBMIT (CREATE TICKET)
+    // MODAL SUBMIT (TICKET CREATE)
     // ===============================
 
     if (
       interaction.isModalSubmit() &&
       interaction.customId.startsWith("mmForm-")
     ) {
-
       await safeDefer();
 
       const category = interaction.customId.split("-")[1];
@@ -251,8 +298,7 @@ module.exports = {
       const extraInfo = interaction.fields.getTextInputValue("extra") || "None";
       const contactMethod = interaction.fields.getTextInputValue("contact");
 
-      const ticketName =
-        `ticket-${interaction.user.username}`.toLowerCase();
+      const ticketName = `ticket-${interaction.user.username}`.toLowerCase();
 
       const otherUser = await resolveMember(guild, traderInput);
 
@@ -267,42 +313,22 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setTitle(`🎫 ${category} Ticket`)
         .setDescription(
-          `Welcome <@${interaction.user.id}>!\nStaff Role: <@&${claimRoleId}>`
+          `Welcome <@${interaction.user.id}>!\nStaff: <@&${claimRoleId}>`
         )
-        .addFields(
-          {
-            name: "📌 Trade Info",
-            value: `Trader: ${traderInput}
+        .addFields({
+          name: "📌 Trade Info",
+          value: `Trader: ${traderInput}
 Details: ${tradeDetails}
 Extra: ${extraInfo}
 Contact: ${contactMethod}`
-          },
-          {
-            name: "Status",
-            value: "Awaiting claim",
-            inline: true
-          }
-        )
+        })
         .setColor("#1F2937")
         .setTimestamp();
 
       const buttons = new ActionRowBuilder().addComponents(
-
-        new ButtonBuilder()
-          .setCustomId("ticket-claim")
-          .setLabel("Claim")
-          .setStyle(ButtonStyle.Success),
-
-        new ButtonBuilder()
-          .setCustomId("ticket-unclaim")
-          .setLabel("Unclaim")
-          .setStyle(ButtonStyle.Secondary),
-
-        new ButtonBuilder()
-          .setCustomId("ticket-close")
-          .setLabel("Close")
-          .setStyle(ButtonStyle.Danger)
-
+        new ButtonBuilder().setCustomId("ticket-claim").setLabel("Claim").setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId("ticket-unclaim").setLabel("Unclaim").setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId("ticket-close").setLabel("Close").setStyle(ButtonStyle.Danger)
       );
 
       await ticketChannel.send({
@@ -314,7 +340,6 @@ Contact: ${contactMethod}`
       return safeEdit({
         content: `✅ Ticket created: <#${ticketChannel.id}>`
       });
-
     }
 
     // ===============================
@@ -326,17 +351,14 @@ Contact: ${contactMethod}`
       interaction.channel &&
       interaction.channel.name.startsWith("ticket-")
     ) {
-
       if (!interaction.member.roles.cache.has(claimRoleId))
         return safeReply({
-          content: "❌ You are not authorized.",
+          content: "❌ Not authorized.",
           ephemeral: true
         });
 
       switch (interaction.customId) {
-
         case "ticket-claim":
-
           return safeReply({
             embeds: [
               new EmbedBuilder()
@@ -347,7 +369,6 @@ Contact: ${contactMethod}`
           });
 
         case "ticket-unclaim":
-
           return safeReply({
             embeds: [
               new EmbedBuilder()
@@ -357,12 +378,8 @@ Contact: ${contactMethod}`
           });
 
         case "ticket-close":
-
           return ticketManager.closeTicket(interaction.channel, guild);
-
       }
-
     }
-
   }
 };
