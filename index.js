@@ -129,27 +129,10 @@ const { loaded: loadedSlashCommands, array: slashCommandsArray } = loadSlashComm
 );
 
 // -------------------------
-// Display Commands in Columns
+// Simple Command Logging
 // -------------------------
-function displayCommands(title, commands) {
-  const colWidth = 25;
-  console.log('==============================');
-  console.log(`✅ ${title} Loaded (${commands.length}):`);
-
-  for (let i = 0; i < commands.length; i += 3) {
-    const row = [
-      commands[i] || '',
-      commands[i + 1] || '',
-      commands[i + 2] || ''
-    ].map(c => c.padEnd(colWidth)).join('');
-    console.log(row);
-  }
-
-  console.log('==============================\n');
-}
-
-displayCommands('Prefix Commands', loadedPrefixCommands);
-displayCommands('Slash Commands', loadedSlashCommands);
+console.log('Commands:', loadedPrefixCommands.join(', '));
+console.log('Slash commands:', loadedSlashCommands.join(', '));
 
 // -------------------------
 // Register Slash Commands (Guild)
