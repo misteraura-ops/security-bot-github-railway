@@ -75,7 +75,7 @@ client.logMod = async function (guild, embed) {
 // Load Prefix Commands
 // -------------------------
 function loadPrefixCommands(dir) {
-  if (!fs.existsSync(dir)) return;
+  if (!fs.existsSync(dir)) return [];
 
   const loadedCommands = [];
 
@@ -106,8 +106,8 @@ console.log('  • ' + loadedPrefixCommands.join('\n  • '));
 // -------------------------
 const slashDir = path.join(__dirname, 'slashCommands');
 if (fs.existsSync(slashDir)) {
-  const commandsArray = [];
   const loadedSlashCommands = [];
+  const commandsArray = [];
 
   for (const file of fs.readdirSync(slashDir).filter(f => f.endsWith('.js'))) {
     const command = require(path.join(slashDir, file));
@@ -124,24 +124,22 @@ if (fs.existsSync(slashDir)) {
   // -------------------------
   // Register Slash Commands (Guild)
   // -------------------------
-  if (process.env.CLIENT_ID && process.env.GUILD_ID && commandsArray.length) {
+  if (process.env.CLIENT_ID && process.env.GUILD_ID) {
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
     (async () => {
-      const start = Date.now();
+      console.log(`🔹 Starting slash command registration for ${commandsArray.length} command(s)...`);
+      const startTime = Date.now();
+
       try {
-        console.log('🔹 Registering slash commands...');
         await rest.put(
           Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
           { body: commandsArray }
         );
-        const duration = Date.now() - start;
-        console.log(`✅ Slash commands registered in ${duration}ms.`);
-        console.log('Registered commands:');
-        console.log('  • ' + loadedSlashCommands.join('\n  • '));
+        const totalTime = Date.now() - startTime;
+        console.log(`🚀 Successfully registered ${commandsArray.length} slash commands in ${totalTime}ms`);
       } catch (err) {
-        const duration = Date.now() - start;
-        console.error(`❌ Failed to register slash commands after ${duration}ms:`, err);
+        console.error('❌ Failed to register slash commands:', err);
       }
     })();
   }
@@ -158,7 +156,7 @@ if (fs.existsSync(eventPath)) {
 
     if (event.once) {
       client.once(event.name, (...args) => event.execute(...args, client));
-    } else if (event.name !== Events.MessageCreate) {
+    } else {
       client.on(event.name, (...args) => event.execute(...args, client));
     }
   }
@@ -170,7 +168,7 @@ if (fs.existsSync(eventPath)) {
 client.on(Events.MessageCreate, async (message) => {
   if (!message.guild || message.author.bot) return;
 
-  if (stickCmd.stickyListener) stickCmd.stickyListener(message);
+  if (stickCmd?.stickyListener) stickCmd.stickyListener(message);
 
   if (client.isMaintenance && message.author.id !== process.env.OWNER_ID) {
     return message.channel.send({
@@ -211,7 +209,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await command.execute(interaction, client);
   } catch (err) {
     console.error(`Error executing slash command ${interaction.commandName}:`, err);
-    if (!interaction.replied) {
+    if (!interaction.replied && !interaction.deferred) {
       await interaction.reply({ content: '❌ There was an error executing this command.', ephemeral: true });
     }
   }
