@@ -26,11 +26,6 @@ const client = new Client({
 });
 
 // -------------------------
-// Stick Command
-// -------------------------
-const stickCmd = require('./commands/moderation/stick');
-
-// -------------------------
 // Collections & Prefixes
 // -------------------------
 client.commands = new Collection();
@@ -72,53 +67,66 @@ client.logMod = async function (guild, embed) {
 };
 
 // -------------------------
-// Load Prefix Commands
+// Load Prefix Commands Recursively
 // -------------------------
 function loadPrefixCommands(dir) {
   if (!fs.existsSync(dir)) return [];
 
-  const loadedCommands = [];
+  const loaded = [];
 
   for (const file of fs.readdirSync(dir)) {
     const fullPath = path.join(dir, file);
     const stat = fs.statSync(fullPath);
 
     if (stat.isDirectory()) {
-      loadedCommands.push(...loadPrefixCommands(fullPath));
+      loaded.push(...loadPrefixCommands(fullPath));
     } else if (file.endsWith('.js')) {
-      const command = require(fullPath);
-      if (command?.name && typeof command.execute === 'function') {
-        client.commands.set(command.name, command);
-        loadedCommands.push(command.name);
+      const cmd = require(fullPath);
+      if (cmd?.name && typeof cmd.execute === 'function') {
+        client.commands.set(cmd.name, cmd);
+        loaded.push(cmd.name);
       }
     }
   }
 
-  return loadedCommands;
+  return loaded;
 }
 
 const loadedPrefixCommands = loadPrefixCommands(path.join(__dirname, 'commands'));
 
 // -------------------------
-// Load Slash Commands
+// Load Slash Commands Recursively
 // -------------------------
-const slashDir = path.join(__dirname, 'slashCommands');
-let loadedSlashCommands = [];
-let slashCommandsArray = [];
+function loadSlashCommands(dir) {
+  if (!fs.existsSync(dir)) return [];
 
-if (fs.existsSync(slashDir)) {
-  loadedSlashCommands = [];
-  slashCommandsArray = [];
+  const loaded = [];
+  const arrayForREST = [];
 
-  for (const file of fs.readdirSync(slashDir).filter(f => f.endsWith('.js'))) {
-    const command = require(path.join(slashDir, file));
-    if (command?.data && typeof command.execute === 'function') {
-      client.slashCommands.set(command.data.name, command);
-      slashCommandsArray.push(command.data.toJSON());
-      loadedSlashCommands.push(command.data.name);
+  for (const file of fs.readdirSync(dir)) {
+    const fullPath = path.join(dir, file);
+    const stat = fs.statSync(fullPath);
+
+    if (stat.isDirectory()) {
+      const { loaded: nested, array: nestedArray } = loadSlashCommands(fullPath);
+      loaded.push(...nested);
+      arrayForREST.push(...nestedArray);
+    } else if (file.endsWith('.js')) {
+      const cmd = require(fullPath);
+      if (cmd?.data && typeof cmd.execute === 'function') {
+        client.slashCommands.set(cmd.data.name, cmd);
+        loaded.push(cmd.data.name);
+        arrayForREST.push(cmd.data.toJSON());
+      }
     }
   }
+
+  return { loaded, array: arrayForREST };
 }
+
+const { loaded: loadedSlashCommands, array: slashCommandsArray } = loadSlashCommands(
+  path.join(__dirname, 'slashCommands')
+);
 
 // -------------------------
 // Display Commands in Columns
@@ -133,7 +141,7 @@ function displayCommands(title, commands) {
       commands[i] || '',
       commands[i + 1] || '',
       commands[i + 2] || ''
-    ].map(cmd => cmd.padEnd(colWidth)).join('');
+    ].map(c => c.padEnd(colWidth)).join('');
     console.log(row);
   }
 
@@ -158,8 +166,7 @@ if (process.env.CLIENT_ID && process.env.GUILD_ID && slashCommandsArray.length >
         Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
         { body: slashCommandsArray }
       );
-      const totalTime = Date.now() - startTime;
-      console.log(`🚀 Successfully registered ${slashCommandsArray.length} slash commands in ${totalTime}ms`);
+      console.log(`🚀 Successfully registered ${slashCommandsArray.length} slash commands in ${Date.now() - startTime}ms`);
     } catch (err) {
       console.error('❌ Failed to register slash commands:', err);
     }
@@ -175,72 +182,10 @@ if (fs.existsSync(eventPath)) {
     const event = require(path.join(eventPath, file));
     if (!event?.name || typeof event.execute !== 'function') continue;
 
-    if (event.once) {
-      client.once(event.name, (...args) => event.execute(...args, client));
-    } else {
-      client.on(event.name, (...args) => event.execute(...args, client));
-    }
+    if (event.once) client.once(event.name, (...args) => event.execute(...args, client));
+    else client.on(event.name, (...args) => event.execute(...args, client));
   }
 }
-
-// -------------------------
-// Handle Prefix Commands
-// -------------------------
-const processedMessages = new Set();
-
-client.on(Events.MessageCreate, async (message) => {
-  if (!message.guild || message.author.bot) return;
-
-  // Prevent processing the same message twice
-  if (processedMessages.has(message.id)) return;
-  processedMessages.add(message.id);
-
-  if (stickCmd?.stickyListener) stickCmd.stickyListener(message);
-
-  if (client.isMaintenance && message.author.id !== process.env.OWNER_ID) {
-    return message.channel.send({
-      embeds: [{
-        color: 0xe67e22,
-        title: '⚠️ Bot Under Maintenance',
-        description: `The bot is currently under maintenance.\nDM <@${process.env.OWNER_ID}> for more info.`
-      }]
-    }).catch(() => {});
-  }
-
-  const prefix = client.prefixes.find(p => message.content.startsWith(p));
-  if (!prefix) return;
-
-  const args = message.content.slice(prefix.length).trim().split(/ +/);
-  const commandName = args.shift().toLowerCase();
-  const command = client.commands.get(commandName);
-  if (!command || typeof command.execute !== 'function') return;
-
-  try {
-    await command.execute(message, args, client);
-  } catch (err) {
-    console.error(`Error in command ${commandName}:`, err);
-    message.reply('❌ There was an error executing that command.').catch(() => {});
-  }
-});
-
-// -------------------------
-// Handle Slash Commands
-// -------------------------
-client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
-
-  const command = client.slashCommands.get(interaction.commandName);
-  if (!command) return;
-
-  try {
-    await command.execute(interaction, client);
-  } catch (err) {
-    console.error(`Error executing slash command ${interaction.commandName}:`, err);
-    if (!interaction.replied && !interaction.deferred) {
-      await interaction.reply({ content: '❌ There was an error executing this command.', ephemeral: true });
-    }
-  }
-});
 
 // -------------------------
 // Ready Event
