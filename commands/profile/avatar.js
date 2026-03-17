@@ -1,5 +1,5 @@
 const { MessageAttachment, MessageEmbed } = require('discord.js');
-const Canvas = require('canvas');
+const Canvas = require('@napi-rs/canvas');
 
 module.exports = {
     name: 'avatar',
