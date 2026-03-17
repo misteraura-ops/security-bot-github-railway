@@ -15,20 +15,22 @@ module.exports = {
             const ctx = canvas.getContext('2d');
 
             // Background
-            const background = await Canvas.loadImage('https://i.ibb.co/4JgRjxJ/abstract-bg.jpg'); // replace with your 4K image
+            const background = await Canvas.loadImage('https://i.ibb.co/4JgRjxJ/abstract-bg.jpg'); // 4K background
             ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
-            // Draw avatar
+            // Avatar circle
             const avatar = await Canvas.loadImage(user.displayAvatarURL({ format: 'png', size: 4096 }));
-            const size = 800; // circle size
+            const size = 800;
             ctx.beginPath();
-            ctx.arc(canvas.width / 2, canvas.height / 2, size / 2, 0, Math.PI * 2);
+            ctx.arc(canvas.width / 2, canvas.height / 2, size / 2, 0, 2 * Math.PI);
             ctx.closePath();
             ctx.clip();
             ctx.drawImage(avatar, canvas.width / 2 - size / 2, canvas.height / 2 - size / 2, size, size);
 
-            const attachment = new MessageAttachment(canvas.toBuffer(), 'avatar.png');
+            // Create attachment
+            const attachment = new MessageAttachment(await canvas.encode('png'), 'avatar.png');
 
+            // Embed
             const embed = new MessageEmbed()
                 .setTitle(`Avatar of ${user.tag}`)
                 .setColor('RANDOM')
@@ -39,7 +41,7 @@ module.exports = {
 
         } catch (err) {
             console.error(err);
-            message.channel.send('⚠️ Something went wrong while generating the avatar!');
+            message.channel.send('⚠️ Could not generate avatar.');
         }
     },
 };
