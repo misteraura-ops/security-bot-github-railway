@@ -77,23 +77,29 @@ client.logMod = async function (guild, embed) {
 function loadPrefixCommands(dir) {
   if (!fs.existsSync(dir)) return;
 
+  const loadedCommands = [];
+
   for (const file of fs.readdirSync(dir)) {
     const fullPath = path.join(dir, file);
     const stat = fs.statSync(fullPath);
 
     if (stat.isDirectory()) {
-      loadPrefixCommands(fullPath);
+      loadedCommands.push(...loadPrefixCommands(fullPath));
     } else if (file.endsWith('.js')) {
       const command = require(fullPath);
       if (command?.name && typeof command.execute === 'function') {
         client.commands.set(command.name, command);
+        loadedCommands.push(command.name);
       }
     }
   }
+
+  return loadedCommands;
 }
 
-loadPrefixCommands(path.join(__dirname, 'commands'));
-console.log(`✅ Loaded prefix commands: ${[...client.commands.keys()].join(', ')}`);
+const loadedPrefixCommands = loadPrefixCommands(path.join(__dirname, 'commands'));
+console.log(`✅ Prefix commands loaded (${loadedPrefixCommands.length}):`);
+console.log('  • ' + loadedPrefixCommands.join('\n  • '));
 
 // -------------------------
 // Load Slash Commands
@@ -101,15 +107,19 @@ console.log(`✅ Loaded prefix commands: ${[...client.commands.keys()].join(', '
 const slashDir = path.join(__dirname, 'slashCommands');
 if (fs.existsSync(slashDir)) {
   const commandsArray = [];
+  const loadedSlashCommands = [];
+
   for (const file of fs.readdirSync(slashDir).filter(f => f.endsWith('.js'))) {
     const command = require(path.join(slashDir, file));
     if (command?.data && typeof command.execute === 'function') {
       client.slashCommands.set(command.data.name, command);
       commandsArray.push(command.data.toJSON());
+      loadedSlashCommands.push(command.data.name);
     }
   }
 
-  console.log(`✅ Loaded slash commands: ${[...client.slashCommands.keys()].join(', ')}`);
+  console.log(`✅ Slash commands loaded (${loadedSlashCommands.length}):`);
+  console.log('  • ' + loadedSlashCommands.join('\n  • '));
 
   // -------------------------
   // Register Slash Commands (Guild)
@@ -121,18 +131,14 @@ if (fs.existsSync(slashDir)) {
       const start = Date.now();
       try {
         console.log('🔹 Registering slash commands...');
-
         await rest.put(
           Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
           { body: commandsArray }
         );
-
         const duration = Date.now() - start;
         console.log(`✅ Slash commands registered in ${duration}ms.`);
-        console.log(
-          'Registered commands:',
-          commandsArray.map(c => c.name).join(', ')
-        );
+        console.log('Registered commands:');
+        console.log('  • ' + loadedSlashCommands.join('\n  • '));
       } catch (err) {
         const duration = Date.now() - start;
         console.error(`❌ Failed to register slash commands after ${duration}ms:`, err);
