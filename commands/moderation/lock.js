@@ -1,121 +1,154 @@
-const { PermissionsBitField } = require('discord.js');
+const { PermissionsBitField, EmbedBuilder } = require("discord.js");
 
 const OWNER_ID = process.env.OWNER_ID;
 
+// temp storage for restores
+const activeLocks = new Map();
+
 module.exports = {
-  name: 'lock',
-  description: 'Lock a channel for specific roles/users or everyone. `.lockhelp` for usage.',
-  aliases: ['unlock'],
-  usage: '.lock [@user|@role|perm|all|everyone] [duration]',
+  name: "lock",
+  description: "Lock channel",
+
   async execute(message, args, client) {
-    // Permission check
-    if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator) && message.author.id !== OWNER_ID) {
-      return message.reply('❌ You do not have permission to use this command.');
+    const member = message.member;
+
+    // =========================
+    // PERMISSION CHECK
+    // =========================
+    if (
+      message.author.id !== OWNER_ID &&
+      !member.permissions.has(PermissionsBitField.Flags.Administrator)
+    ) {
+      return message.reply("❌ You need Administrator to use this.");
     }
 
+    // =========================
+    // HELP COMMAND
+    // =========================
+    if (message.content.startsWith(".lockhelp")) {
+      const embed = new EmbedBuilder()
+        .setTitle("🔒 Lock Command Help")
+        .setColor("#2b2d31")
+        .setDescription(`
+**Usage:**
+.lock → lock channel
+.lock @user
+.lock @role
+.lock everyone
+.lock all
+.lock 10m (temporary)
+
+.unlock → restore
+
+**What it does:**
+✔ View Channel
+✔ Read Message History
+❌ Everything else disabled
+        `);
+      return message.reply({ embeds: [embed] });
+    }
+
+    // =========================
+    // UNLOCK
+    // =========================
+    if (message.content.startsWith(".unlock")) {
+      const saved = activeLocks.get(message.channel.id);
+      if (!saved) return message.reply("❌ No lock data found.");
+
+      for (const [id, perms] of saved) {
+        await message.channel.permissionOverwrites.edit(id, perms).catch(() => {});
+      }
+
+      activeLocks.delete(message.channel.id);
+      return message.reply("🔓 Channel unlocked.");
+    }
+
+    // =========================
+    // LOCK LOGIC
+    // =========================
     const channel = message.channel;
+    const target = message.mentions.members.first() || message.mentions.roles.first();
 
-    // Show help if requested
-    if (args[0] === 'help' || args[0] === 'lockhelp') {
-      return message.reply({
-        content: `**🔒 Lock Command Help**
-• \`.lock @user <duration>\` → Locks for a user
-• \`.lock @role <duration>\` → Locks for a role
-• \`.lock all\` or \`.lock everyone\` → Locks everyone
-• \`.lock <duration>\` → Locks channel for all non-admins
-• \`.unlock [@user|@role|all]\` → Unlocks channel
-• Duration format: 10s, 5m, 1h, etc.`
-      });
-    }
+    let overwriteTarget;
 
-    // Detect if unlocking
-    const isUnlock = message.content.toLowerCase().startsWith('.unlock');
-
-    // Handle targets
-    let targetMembers = [];
-    let targetRoles = [];
-    let lockEveryone = false;
-    let duration = null;
-
-    if (args.length > 0) {
-      // parse duration if last arg is like 10m, 5h, etc.
-      const lastArg = args[args.length - 1];
-      const durationMatch = lastArg.match(/^(\d+)(s|m|h)$/);
-      if (durationMatch) {
-        duration = parseInt(durationMatch[1]);
-        const unit = durationMatch[2];
-        if (unit === 's') duration *= 1000;
-        if (unit === 'm') duration *= 60 * 1000;
-        if (unit === 'h') duration *= 60 * 60 * 1000;
-        args.pop();
-      }
-
-      const target = args[0].toLowerCase();
-
-      if (target === 'all' || target === 'everyone') {
-        lockEveryone = true;
-      } else if (message.mentions.members.size > 0) {
-        targetMembers = Array.from(message.mentions.members.values());
-      } else if (message.mentions.roles.size > 0) {
-        targetRoles = Array.from(message.mentions.roles.values());
-      } else {
-        // No mentions → default: everyone
-        lockEveryone = true;
-      }
+    if (!args[0]) {
+      overwriteTarget = channel.guild.roles.everyone;
+    } else if (args[0] === "everyone" || args[0] === "all") {
+      overwriteTarget = channel.guild.roles.everyone;
+    } else if (target) {
+      overwriteTarget = target;
     } else {
-      lockEveryone = true;
+      overwriteTarget = channel.guild.roles.everyone;
     }
 
-    // Permissions to allow (checkmark) 
-    const allowPerms = [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.ReadMessageHistory];
-
-    // Helper: build overwrite object
-    const buildOverwrite = (memberOrRole) => {
-      // Start with all denied
-      const denied = new PermissionsBitField(Object.values(PermissionsBitField.Flags));
-      // Allow only the two
-      const allowed = new PermissionsBitField(allowPerms);
-      // Apply deny - allow
-      return { deny: denied.remove(allowPerms), allow: allowed };
-    };
-
-    try {
-      // LOCK / UNLOCK
-      if (isUnlock) {
-        const targets = lockEveryone ? [channel.guild.roles.everyone] : [...targetRoles, ...targetMembers];
-        for (const t of targets) {
-          await channel.permissionOverwrites.edit(t, {
-            ViewChannel: true,
-            ReadMessageHistory: true,
-            SendMessages: true
-          });
-        }
-        return message.reply('✅ Channel unlocked for selected target(s).');
-      } else {
-        const targets = lockEveryone ? [channel.guild.roles.everyone] : [...targetRoles, ...targetMembers];
-        for (const t of targets) {
-          await channel.permissionOverwrites.edit(t, buildOverwrite(t));
-        }
-
-        message.reply(`🔒 Channel locked for ${lockEveryone ? 'everyone' : targets.map(x => x.name || x.user.username).join(', ')}`);
-
-        // TEMP LOCK
-        if (duration) {
-          setTimeout(async () => {
-            for (const t of targets) {
-              await channel.permissionOverwrites.edit(t, {
-                ViewChannel: true,
-                ReadMessageHistory: true,
-                SendMessages: true
-              });
-            }
-            channel.send(`✅ Temporary lock expired, channel unlocked for ${lockEveryone ? 'everyone' : targets.map(x => x.name || x.user.username).join(', ')}`);
-          }, duration);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-      message.reply('❌ Something went wrong while updating channel permissions.');
+    // =========================
+    // SAVE OLD PERMS
+    // =========================
+    if (!activeLocks.has(channel.id)) {
+      activeLocks.set(channel.id, new Map());
     }
+
+    const channelMap = activeLocks.get(channel.id);
+    const existing = channel.permissionOverwrites.cache.get(overwriteTarget.id);
+
+    channelMap.set(overwriteTarget.id, {
+      allow: existing?.allow?.bitfield || 0n,
+      deny: existing?.deny?.bitfield || 0n
+    });
+
+    // =========================
+    // NEW PERMISSIONS
+    // =========================
+    await channel.permissionOverwrites.edit(overwriteTarget, {
+      ViewChannel: true,
+      ReadMessageHistory: true,
+
+      SendMessages: false,
+      AddReactions: false,
+      SendMessagesInThreads: false,
+      CreatePublicThreads: false,
+      CreatePrivateThreads: false,
+      EmbedLinks: false,
+      AttachFiles: false,
+      UseExternalEmojis: false,
+      UseApplicationCommands: false,
+      MentionEveryone: false,
+      ManageMessages: false,
+      ManageThreads: false,
+      SendTTSMessages: false
+    });
+
+    // =========================
+    // TEMP LOCK
+    // =========================
+    const timeArg = args.find(a => a.match(/\d+[smhd]/));
+    if (timeArg) {
+      const time = parseTime(timeArg);
+
+      setTimeout(async () => {
+        const saved = activeLocks.get(channel.id);
+        if (!saved) return;
+
+        for (const [id, perms] of saved) {
+          await channel.permissionOverwrites.edit(id, perms).catch(() => {});
+        }
+
+        activeLocks.delete(channel.id);
+      }, time);
+    }
+
+    return message.reply(`🔒 Channel locked for ${overwriteTarget.name || overwriteTarget.user?.username}`);
   }
 };
+
+// =========================
+// TIME PARSER
+// =========================
+function parseTime(str) {
+  const num = parseInt(str);
+  if (str.endsWith("s")) return num * 1000;
+  if (str.endsWith("m")) return num * 60 * 1000;
+  if (str.endsWith("h")) return num * 60 * 60 * 1000;
+  if (str.endsWith("d")) return num * 24 * 60 * 60 * 1000;
+  return 0;
+}
