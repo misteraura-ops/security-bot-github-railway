@@ -10,8 +10,8 @@ const {
   EmbedBuilder
 } = require("discord.js");
 
-const eco = require("./systems/economySystem");
-const ui = require("./systems/uiBuilder");
+const eco = require("../systems/economySystem");
+const ui = require("../systems/uiBuilder");
 const ticketManager = require("../utils/ticketManager");
 
 module.exports = {
