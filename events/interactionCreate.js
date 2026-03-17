@@ -57,7 +57,8 @@ module.exports = {
       if (!command) return;
 
       try {
-        await safeDefer(false); // defer to avoid timeout
+        // defer immediately to prevent "thinking..." timeout
+        if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
         await command.execute(interaction, client);
       } catch (err) {
         console.error(`Error executing slash command ${interaction.commandName}:`, err);
@@ -71,14 +72,13 @@ module.exports = {
     // BUTTON HANDLER
     // ===============================
     if (interaction.isButton()) {
+      await safeDefer(false); // defer immediately
       const id = interaction.customId;
       const userData = await eco.getUser(interaction.user.id);
       const now = Date.now();
 
       // ---------- ECONOMY ----------
       if (id.startsWith("eco_")) {
-        await safeDefer(false);
-
         // WORK
         if (id === "eco_work") {
           const cooldown = 5 * 60 * 1000;
@@ -121,7 +121,6 @@ module.exports = {
         }
 
         if (id.startsWith("restore_roles_")) {
-          await safeDefer();
           const guildID = id.split("_")[2];
           const backupFile = `./backups/${guildID}_roles.json`;
 
@@ -188,6 +187,7 @@ module.exports = {
     // STRING SELECT (Ticket Category)
     // ===============================
     if (interaction.isStringSelectMenu() && interaction.customId === "ticketCategorySelect") {
+      await safeDefer(true);
       const category = interaction.values[0];
       const modal = new ModalBuilder().setCustomId(`mmForm-${category}`).setTitle(`🎫 ${category} Trade Form`);
 
@@ -213,7 +213,7 @@ module.exports = {
     // MODAL SUBMIT (Ticket Create)
     // ===============================
     if (interaction.isModalSubmit() && interaction.customId.startsWith("mmForm-")) {
-      await safeDefer();
+      await safeDefer(true);
 
       const category = interaction.customId.split("-")[1];
       const traderInput = interaction.fields.getTextInputValue("trader");
@@ -222,7 +222,6 @@ module.exports = {
       const contactMethod = interaction.fields.getTextInputValue("contact");
       const ticketName = `ticket-${interaction.user.username}`.toLowerCase();
 
-      // resolve trader member
       async function resolveMember(guild, input) {
         if (!input) return null;
         const mentionMatch = input.match(/<@!?(\d+)>/);
