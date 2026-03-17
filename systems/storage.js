@@ -1,29 +1,16 @@
 const fs = require("fs");
 const path = require("path");
 
-const dataFile = path.join(__dirname, "../data/users.json");
-
-// Ensure file exists
-if (!fs.existsSync(dataFile)) fs.writeFileSync(dataFile, "{}");
-
-function read() {
-  try {
-    const raw = fs.readFileSync(dataFile, "utf8");
-    if (!raw) return {};
-    return JSON.parse(raw);
-  } catch (err) {
-    console.error("⚠️ Failed to read JSON, resetting file:", err);
-    fs.writeFileSync(dataFile, "{}");
-    return {};
+module.exports = {
+  read(file) {
+    if (!fs.existsSync(file)) return {};
+    try {
+      return JSON.parse(fs.readFileSync(file, "utf8"));
+    } catch {
+      return {};
+    }
+  },
+  write(file, data) {
+    fs.writeFileSync(file, JSON.stringify(data, null, 2));
   }
-}
-
-function write(data) {
-  try {
-    fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
-  } catch (err) {
-    console.error("⚠️ Failed to write JSON:", err);
-  }
-}
-
-module.exports = { read, write };
+};
