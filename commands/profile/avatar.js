@@ -1,9 +1,11 @@
-module.exports = {
+Ppmodule.exports = {
   name: 'avatar',
   aliases: ['av', 'pfp'],
   async execute(message, args) {
     try {
+      // Fetch member if mentioned, else fallback to author
       const user = message.mentions.users.first() || message.author;
+
       await message.channel.send({
         embeds: [{
           title: `${user.tag}'s Avatar`,
@@ -12,7 +14,8 @@ module.exports = {
           footer: { text: `Requested by ${message.author.tag}`, icon_url: message.author.displayAvatarURL({ dynamic: true }) }
         }]
       });
-    } catch {
+    } catch (err) {
+      console.error(err);
       message.channel.send('⚠️ Could not fetch avatar. Make sure the user exists!');
     }
   }
