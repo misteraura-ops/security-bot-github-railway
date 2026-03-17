@@ -2,30 +2,40 @@ const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
   name: 'av',
-  description: 'Displays a user\'s avatar.',
-  usage: '.av [@user|userID]',
+  description: 'Display a user\'s avatar with a professional panel.',
+  usage: '.av [@user|ID]',
   async execute(message, args, client) {
     try {
-      // Get the user from mention or ID, default to message author
+      // Fetch user
       let user;
       if (args[0]) {
-        user = await message.guild.members.fetch(args[0]).catch(() => null);
-        if (user) user = user.user;
+        const fetchedMember = await message.guild.members.fetch(args[0]).catch(() => null);
+        if (fetchedMember) user = fetchedMember.user;
       }
       if (!user) user = message.mentions.users.first() || message.author;
 
-      // Create embed
+      // Build embed
       const avatarEmbed = new EmbedBuilder()
-        .setTitle(`${user.tag}'s Avatar`)
+        .setTitle(`${user.username}'s Avatar`)
+        .setURL(user.displayAvatarURL({ dynamic: true, size: 1024 }))
         .setImage(user.displayAvatarURL({ dynamic: true, size: 1024 }))
-        .setColor('Random')
+        .setColor(user.accentColor || 'Random')
         .setFooter({ text: `Requested by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
         .setTimestamp();
+
+      // Extra info for bots
+      if (user.bot) {
+        avatarEmbed.addFields(
+          { name: '🤖 Bot', value: 'Yes', inline: true },
+          { name: 'Bot ID', value: user.id, inline: true },
+          { name: 'Avatar URL', value: `[Click Here](${user.displayAvatarURL({ dynamic: true })})`, inline: false }
+        );
+      }
 
       await message.channel.send({ embeds: [avatarEmbed] });
     } catch (err) {
       console.error('Avatar Command Error:', err);
-      message.channel.send('❌ Unable to fetch avatar. Make sure the ID or mention is valid.');
+      message.channel.send('❌ Could not fetch avatar. Ensure the ID/mention is valid.');
     }
   },
 };
